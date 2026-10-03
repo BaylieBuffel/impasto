@@ -44,6 +44,13 @@ import "../components"
 PanelWindow {
     id: root
 
+    // Named for the blur behind it (`windowrules.lua`), which shows only
+    // through a ground that is not solid.
+    WlrLayershell.namespace: "impasto-bar"
+    // What is drawn here takes the island's glass (`Theme.surfaceIn`).
+    readonly property bool glassy: true
+    readonly property string groundStyle: Theme.surfaceStyle
+
     readonly property alias island: island
 
     // Whether this is the screen being worked on (`shell.qml`). Everything
@@ -69,6 +76,9 @@ PanelWindow {
     readonly property string style: SettingsService.barStyle
     readonly property bool spread: root.style === "spread"
     readonly property bool unified: root.style === "island"
+    // The sides on the wallpaper, without capsules; not in one capsule, whose
+    // band is the sides' ground.
+    readonly property bool bare: !root.unified && SettingsService.barSides === "bare"
     readonly property bool grouped: !root.spread && !root.unified
 
     // Stretch the band across the screen instead of fitting its contents.
@@ -127,9 +137,11 @@ PanelWindow {
 
     // The island is showing more than the clock: a panel, a detail, the
     // glance or a notification. An OSD fits in the band and does not count.
+    // In zen too, where the sides are away and the band is only the island.
     readonly property bool islandTaken: island.expanded
         || island.state.layer === island.state.layerSummary
         || island.state.layer === island.state.layerNotification
+        || root.zen
     readonly property real bodyX: root.fullWidth
         ? root.edgeMargin : (root.width - root.bodyWidth) / 2
 
@@ -154,6 +166,10 @@ PanelWindow {
     // Attached (notch mode), only the island reaches the screen edge; the
     // sides stay capsules, centred on `laneY`.
     readonly property int islandTopMargin: SettingsService.islandAttached ? 0 : Theme.barTopMargin
+
+    // How far the glass's light from the top reaches down the notch
+    // (`GlassSheen`), for the fillets that carry it on.
+    readonly property real notchSheen: Theme.glass && !island.paper ? Theme.glassSheenDepth : 0
 
     // The line everything on the bar is centred on. Attached, the island
     // reaches the screen edge, so its centre is half a margin higher and the
@@ -197,12 +213,22 @@ PanelWindow {
     // No input at all while desktop widgets are being arranged: dragging one
     // over the bar would move the pointer to this surface, and the desktop
     // would drop the widget. None either where nothing is painted.
-    readonly property bool inert: DesktopService.editing || !root.painted
+    readonly property bool inert: DesktopService.editing || !root.painted || root.away
+
+    // Zen (`barHidden`): the bar waits above the screen and the island comes
+    // down only for what it has to show — a panel, a notification, a
+    // transient — with the sides left up there.
+    readonly property bool zen: SettingsService.barHidden
+    readonly property bool called: island.state.layer !== island.state.layerModules
+        && island.state.layer !== island.state.layerSummary
+    readonly property bool away: root.zen && !root.called
 
     mask: Region {
         width: root.inert ? 0 : root.width
+        // In zen the band is empty, and only the island's shape takes input.
         height: root.inert ? 0
-            : root.wholeScreen ? root.height : root.collapsedHeight
+            : root.wholeScreen ? root.height
+            : root.zen ? 0 : root.collapsedHeight
 
         Region {
             x: root.shapeLeft
@@ -324,7 +350,9 @@ PanelWindow {
     Item {
         id: face
 
-        anchors.fill: parent
+        width: parent.width
+        height: parent.height
+        y: root.away ? -2 * root.collapsedHeight : 0
         visible: root.painted || face.opacity > 0
         opacity: root.painted ? 1 : 0
 
@@ -332,12 +360,16 @@ PanelWindow {
             NumberAnimation { duration: Theme.durationFast; easing.type: Theme.easing }
         }
 
+        Behavior on y {
+            NumberAnimation { duration: Theme.durationMedium; easing.type: Theme.easing }
+        }
+
         // ── SHADOW ──────────────────────────────────────────────────────────────
         //
-        // Same numbers and setting as the window shadow. The band, the island and
-        // the notch fillets touch, so they share one flattened layer; separate
-        // shadows would draw a seam where they overlap. The side capsules cast
-        // their own (`BarZone`).
+        // The window shadow's numbers, on its own setting (`barShadow`). The
+        // band, the island and the notch fillets touch, so they share one
+        // flattened layer; separate shadows would draw a seam where they
+        // overlap. The side capsules cast their own (`BarZone`).
         //
         // Cast from a copy of the shapes: layering the real bar would re-blur the
         // full-screen surface every time the clock or the spectrum repaints.
@@ -348,68 +380,175 @@ PanelWindow {
         // does not work inside a Repeater.
         Loader {
             anchors.fill: parent
-            active: SettingsService.windowShadow
+            active: SettingsService.barShadow
             sourceComponent: shadowBody
         }
 
         Component {
             id: shadowBody
 
+            // Under a ground that lets the screen through, the shapes are cut
+            // out of their shadow, so it falls outside them and does not show
+            // through.
             Item {
-                id: caster
-
-                anchors.fill: parent
-                opacity: Theme.shadowOpacity
-
-                layer.enabled: true
+                layer.enabled: !Theme.solid
                 layer.effect: MultiEffect {
-                    blurEnabled: true
-                    blur: 1
-                    blurMax: Theme.shadowBarRange - Theme.shadowBarSpread
+                    maskEnabled: true
+                    maskInverted: true
+                    maskSource: cutout
+                    maskThresholdMin: 0.5
+                    maskSpreadAtMin: 1
                 }
 
-                readonly property int spread: Theme.shadowBarSpread
+                Item {
+                    id: cutout
 
-                Rectangle {
-                    x: band.x - caster.spread
-                    y: band.y - caster.spread
-                    width: band.width + 2 * caster.spread
-                    height: band.height + 2 * caster.spread
-                    radius: band.radius + caster.spread
-                    topLeftRadius: band.topLeftRadius > 0 ? band.topLeftRadius + caster.spread : 0
-                    topRightRadius: band.topRightRadius > 0 ? band.topRightRadius + caster.spread : 0
-                    visible: body.visible
-                    color: Theme.shadowColor
-                }
+                    anchors.fill: parent
+                    visible: false
+                    layer.enabled: !Theme.solid
 
-                Rectangle {
-                    x: root.islandLeft - caster.spread
-                    y: island.y - caster.spread
-                    width: island.width + 2 * caster.spread
-                    height: island.height + 2 * caster.spread
-                    radius: island.radius + caster.spread
-                    topLeftRadius: island.topLeftRadius > 0 ? island.topLeftRadius + caster.spread : 0
-                    topRightRadius: island.topRightRadius > 0 ? island.topRightRadius + caster.spread : 0
-                    color: Theme.shadowColor
-                }
+                    Rectangle {
+                        x: band.x
+                        y: SettingsService.islandAttached ? 0 : band.y
+                        width: band.width
+                        height: band.y + band.height - y
+                        radius: band.radius
+                        topLeftRadius: band.topLeftRadius
+                        topRightRadius: band.topRightRadius
+                        // Not `visible`: inside the hidden source it reads false
+                        // and the band is left out of the mask.
+                        opacity: root.unified ? 1 : 0
+                    }
 
-                Repeater {
-                    model: [notchLeft, notchRight]
+                    // Attached, the shadow runs up to the screen's edge, so the
+                    // cut does too while the island slides up into the notch.
+                    Rectangle {
+                        x: root.islandLeft
+                        y: SettingsService.islandAttached ? 0 : island.y
+                        width: island.width
+                        height: island.y + island.height - y
+                        radius: island.radius
+                        topLeftRadius: SettingsService.islandAttached ? 0 : island.topLeftRadius
+                        topRightRadius: SettingsService.islandAttached ? 0 : island.topRightRadius
+                    }
 
-                    NotchFillet {
-                        required property var modelData
+                    Repeater {
+                        model: [notchLeft, notchRight]
 
-                        x: modelData.x
-                        y: modelData.y
-                        width: modelData.width
-                        height: modelData.height
-                        visible: modelData.visible
-                        opacity: modelData.opacity
-                        mirrored: modelData.mirrored
-                        color: Theme.shadowColor
+                        NotchFillet {
+                            required property var modelData
+
+                            x: modelData.x
+                            y: modelData.y
+                            width: modelData.width
+                            height: modelData.height
+                            opacity: modelData.visible ? 1 : 0
+                            mirrored: modelData.mirrored
+                            color: "black"
+                        }
                     }
                 }
 
+                Item {
+                    id: caster
+
+                    // Attached, the layer runs above the screen by the blur's reach and
+                    // the shapes run up into it, so the blur reads the notch as going on
+                    // past the edge and the shadow keeps its weight up to the top.
+                    anchors.fill: parent
+                    anchors.topMargin: -caster.pad
+                    opacity: Theme.shadowOpacity
+
+                    layer.enabled: true
+                    layer.effect: MultiEffect {
+                        blurEnabled: true
+                        blur: 1
+                        blurMax: Theme.shadowBarRange - Theme.shadowBarSpread
+                    }
+
+                    readonly property int spread: Theme.shadowBarSpread
+                    readonly property int pad: SettingsService.islandAttached ? Theme.shadowBarRange : 0
+
+                    Rectangle {
+                        x: band.x - caster.spread
+                        y: band.y - caster.spread
+                        width: band.width + 2 * caster.spread
+                        height: band.height + 2 * caster.spread + caster.pad
+                        radius: band.radius + caster.spread
+                        topLeftRadius: band.topLeftRadius > 0 ? band.topLeftRadius + caster.spread : 0
+                        topRightRadius: band.topRightRadius > 0 ? band.topRightRadius + caster.spread : 0
+                        visible: body.visible
+                        color: Theme.shadowColor
+                    }
+
+                    Rectangle {
+                        x: root.islandLeft - caster.spread
+                        y: island.y - caster.spread
+                        width: island.width + 2 * caster.spread
+                        height: island.height + 2 * caster.spread + caster.pad
+                        radius: island.radius + caster.spread
+                        topLeftRadius: island.topLeftRadius > 0 ? island.topLeftRadius + caster.spread : 0
+                        topRightRadius: island.topRightRadius > 0 ? island.topRightRadius + caster.spread : 0
+                        color: Theme.shadowColor
+                    }
+
+                    // The fillets grown by the spread as the rectangles are: the same
+                    // centre, a radius short by the spread, and a strip for the top
+                    // edge moved up by it. Past the tip the strip runs on along the
+                    // edge and fades out, or the shadow down the curve stops square
+                    // where the curve meets the edge.
+                    Repeater {
+                        model: [notchLeft, notchRight]
+
+                        Item {
+                            required property var modelData
+
+                            x: modelData.x
+                            y: caster.pad + modelData.y
+                            width: modelData.width
+                            height: modelData.height
+                            visible: modelData.visible
+                            opacity: modelData.opacity
+
+                            // Solid only: along the edge of the screen a
+                            // see-through notch would show it as a stain.
+                            Rectangle {
+                                y: -caster.pad
+                                visible: Theme.solid
+                                width: parent.width
+                                height: caster.pad + caster.spread
+                                color: Theme.shadowColor
+                            }
+
+                            Rectangle {
+                                id: tail
+
+                                readonly property bool mirrored: parent.modelData.mirrored
+
+                                x: mirrored ? -width : parent.width
+                                y: -caster.pad
+                                visible: Theme.solid
+                                width: parent.width * 2
+                                height: caster.pad + caster.spread
+                                gradient: Gradient {
+                                    orientation: Gradient.Horizontal
+                                    GradientStop { position: 0; color: tail.mirrored ? "transparent" : Theme.shadowColor }
+                                    GradientStop { position: 1; color: tail.mirrored ? Theme.shadowColor : "transparent" }
+                                }
+                            }
+
+                            NotchFillet {
+                                x: parent.modelData.mirrored ? 0 : caster.spread
+                                y: caster.spread
+                                width: Math.max(0, parent.width - caster.spread)
+                                height: Math.max(0, parent.height - caster.spread)
+                                mirrored: parent.modelData.mirrored
+                                color: Theme.shadowColor
+                            }
+                        }
+                    }
+
+                }
             }
         }
 
@@ -438,7 +577,14 @@ PanelWindow {
 
                 Behavior on color { ColorAnimation { duration: Theme.durationFast } }
 
-// Clicking the band opens the island. The sides sit above it and
+                // The band is the ground here, so it carries the glass.
+                GlassSheen {
+                    shape: band
+                    visible: Theme.glass && !island.paper
+                    edges: !SettingsService.islandAttached
+                }
+
+                // Clicking the band opens the island. The sides sit above it and
                 // take their own clicks.
                 MouseArea {
                     anchors.fill: parent
@@ -477,10 +623,10 @@ PanelWindow {
             radius: band.radius
             topLeftRadius: band.topLeftRadius
             topRightRadius: band.topRightRadius
-            visible: root.unified && !island.paper
+            visible: root.unified && !island.paper && !SettingsService.islandAttached
             color: "transparent"
             border.width: 1
-            border.color: root.islandTaken ? Theme.islandBorder : "transparent"
+            border.color: root.islandTaken ? Theme.islandRim : "transparent"
 
             Behavior on border.color { ColorAnimation { duration: Theme.durationMedium } }
         }
@@ -494,12 +640,24 @@ PanelWindow {
             anchors.fill: parent
             z: 3
 
+            // Right under the island, the grid's size, then the card of
+            // blocks.
+            Loader {
+                id: arranging
+
+                x: (parent.width - width) / 2
+                y: root.islandTopMargin + island.height + Theme.desktopGutter
+                active: root.live && ControlsService.editing
+                sourceComponent: GridSize {}
+            }
+
             Loader {
                 anchors.fill: parent
                 active: root.live && ControlsService.editing
                 sourceComponent: ControlsTray {
                     host: overlay
-                    homeTop: root.islandTopMargin + island.height + Theme.desktopGutter
+                    homeTop: arranging.y + (arranging.item ? arranging.item.height : 0)
+                        + Theme.desktopGutter
                 }
             }
         }
@@ -515,6 +673,7 @@ PanelWindow {
             visible: SettingsService.islandAttached
             mirrored: true
             color: island.surfaceColor
+            sheenReach: root.notchSheen
         }
 
         NotchFillet {
@@ -524,6 +683,48 @@ PanelWindow {
             anchors.top: parent.top
             visible: SettingsService.islandAttached
             color: island.surfaceColor
+            sheenReach: root.notchSheen
+        }
+
+        // On glass, attached, the island and its fillets are one pane: the
+        // light from the top runs on into the fillets, and the thick edge
+        // follows the outline below rather than the island's own rectangle.
+        Repeater {
+            model: SettingsService.islandAttached && Theme.glass && !island.paper
+                ? [[1, 1], [2, 0.6], [3, 0.35], [4, 0.15]] : []
+
+            NotchOutline {
+                required property var modelData
+
+                inset: modelData[0]
+                shapeLeft: root.shapeLeft
+                shapeRight: root.shapeRight
+                shapeHeight: root.unified ? band.height : island.height
+                radius: island.radius
+                color: Qt.rgba(1, 1, 1, Theme.glassEdge * modelData[1])
+            }
+        }
+
+        // Attached, the hairline runs down the fillets and round the shape, and
+        // not along the screen edge. In one capsule only while the island has
+        // the band, as `outline` above.
+        NotchOutline {
+            visible: SettingsService.islandAttached && !island.paper
+            shapeLeft: root.shapeLeft
+            shapeRight: root.shapeRight
+            shapeHeight: root.unified ? band.height : island.height
+            radius: island.radius
+            color: !root.unified || root.islandTaken ? Theme.islandRim : "transparent"
+
+            Behavior on color { ColorAnimation { duration: Theme.durationMedium } }
+        }
+
+        component BareShadow: MultiEffect {
+            shadowEnabled: true
+            blurMax: Theme.barShadowReach
+            shadowBlur: 1
+            shadowVerticalOffset: 1
+            shadowColor: Theme.barShadow
         }
 
         // ── SIDES ───────────────────────────────────────────────────────────────
@@ -542,13 +743,30 @@ PanelWindow {
             width: sides.cropped ? band.width : root.width
             height: root.height
             clip: sides.cropped
+            opacity: root.zen ? 0 : 1
+            visible: opacity > 0
+
+            Behavior on opacity {
+                NumberAnimation { duration: Theme.durationFast; easing.type: Theme.easing }
+            }
+
+            // On the wallpaper, the sides are cast twice: the shadow's own
+            // shadow is what makes a thin dark edge dense enough to hold white
+            // off a light picture, which one blurred copy of a small glyph is
+            // not.
+            layer.enabled: root.bare
+            layer.effect: BareShadow {}
 
             BarZone {
                 id: leftZone
 
                 entries: SettingsService.barItems("left")
-                chromeless: root.unified
+                chromeless: root.unified || root.bare
                 hostScreen: root.screen
+                overWallpaper: root.bare
+
+                layer.enabled: root.bare
+                layer.effect: BareShadow {}
                 x: (root.unified ? root.bodyX + root.hostedInset
                     : root.spread ? root.edgeMargin
                     : root.islandLeft - Theme.capsuleSpacing - leftZone.width) - sides.x
@@ -568,8 +786,12 @@ PanelWindow {
                 id: rightZone
 
                 entries: SettingsService.barItems("right")
-                chromeless: root.unified
+                chromeless: root.unified || root.bare
                 hostScreen: root.screen
+                overWallpaper: root.bare
+
+                layer.enabled: root.bare
+                layer.effect: BareShadow {}
                 x: (root.unified ? root.bodyX + root.bodyWidth - root.hostedInset - rightZone.width
                     : root.spread ? root.width - root.edgeMargin - rightZone.width
                     : root.islandRight + Theme.capsuleSpacing) - sides.x

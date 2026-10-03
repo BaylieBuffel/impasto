@@ -14,6 +14,7 @@ import Quickshell.Wayland
 
 import "../theme"
 import "../services"
+import "../components"
 
 // The dock: a capsule on a screen edge with the pinned and open applications.
 //
@@ -218,20 +219,29 @@ PanelWindow {
         Loader {
             anchors.fill: parent
             anchors.margins: -Theme.shadowBarRange
-            active: SettingsService.windowShadow
+            active: SettingsService.barShadow
             sourceComponent: caster
         }
 
-        // The island's black; with lower opacity the compositor's blur shows
-        // through. The border keeps its own alpha, so a translucent capsule
-        // still has an edge.
+        // Classic is the island's black, at the Background setting's opacity
+        // over the compositor's blur; glass is the terminal's ground, with
+        // its lit edge. The border keeps its own alpha, so a translucent
+        // capsule still has an edge.
         Rectangle {
+            id: ground
+
             anchors.fill: parent
             radius: Theme.dockRadius
-            color: Qt.rgba(Theme.island.r, Theme.island.g, Theme.island.b,
-                           SettingsService.dockOpacity / 100)
-            border.color: Theme.islandBorder
+            color: Theme.dockGlass ? Theme.groundOf("glass")
+                : Qt.rgba(Theme.island.r, Theme.island.g, Theme.island.b,
+                          SettingsService.dockOpacity / 100)
+            border.color: Theme.rimOf(Theme.dockStyle)
             border.width: 1
+
+            GlassSheen {
+                shape: ground
+                visible: Theme.dockGlass
+            }
         }
 
         // ── LAUNCHER BUTTON ─────────────────────────────────────────────
@@ -260,7 +270,7 @@ PanelWindow {
                 anchors.fill: parent
                 anchors.margins: -3
                 radius: Theme.radiusMedium
-                color: Theme.islandSurfaceHover
+                color: Theme.veilHoverOf(Theme.dockStyle)
                 opacity: launcher.hovered ? 1 : 0
                 visible: opacity > 0
 
@@ -273,7 +283,7 @@ PanelWindow {
                 anchors.centerIn: parent
                 text: "󰀻"
                 font.family: Theme.fontMono
-                font.pixelSize: Math.round(Theme.dockIcon * 0.58)
+                font.pixelSize: Math.round((Theme.dockIcon - 2 * Theme.dockInset) * 0.58)
                 color: Theme.text
             }
 
@@ -298,7 +308,10 @@ PanelWindow {
         }
 
         Repeater {
-            model: DockService.items
+            model: ScriptModel {
+                values: DockService.items
+                objectProp: "key"
+            }
 
             DockItem {
                 capsule: shelf
@@ -438,9 +451,14 @@ PanelWindow {
             width: name.implicitWidth + 20
             height: name.implicitHeight + 12
             radius: Theme.radiusMedium
-            color: Theme.island
-            border.color: Theme.islandBorder
+            color: Theme.groundOf(Theme.dockStyle)
+            border.color: Theme.rimOf(Theme.dockStyle)
             border.width: 1
+
+            GlassSheen {
+                shape: plate
+                visible: Theme.dockGlass
+            }
 
             Text {
                 id: name

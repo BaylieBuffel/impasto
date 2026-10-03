@@ -9,6 +9,7 @@
 
 import QtQuick
 
+import Quickshell
 import "../../../theme"
 
 // Snake, and the template for the other games: the contract first, state as
@@ -181,8 +182,8 @@ FocusScope {
         width: root.cell * root.columns
         height: root.cell * root.rows
         radius: Theme.radiusMedium
-        color: Theme.islandSurface
-        border.color: Theme.islandBorder
+        color: Theme.surfaceIn(QsWindow.window)
+        border.color: Theme.borderIn(QsWindow.window)
         border.width: 1
 
         // The cells, painted once: a board the snake can be read against, and
@@ -281,7 +282,7 @@ FocusScope {
                 const last = points.length - 1
                 const girth = at => size * (0.78 - 0.34 * at)
                 const paint = (at, lift) => {
-                    const ground = Theme.islandSurface
+                    const ground = Theme.surfaceIn(QsWindow.window)
                     const mix = at * 0.45
                     const shade = {
                         r: root.tint.r + (ground.r - root.tint.r) * mix,

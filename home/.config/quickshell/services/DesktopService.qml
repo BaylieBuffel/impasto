@@ -74,11 +74,14 @@ Singleton {
     // ── THEMES ──────────────────────────────────────────────────────────────
     //
     // Modern (`faces/WidgetFace`) shows figures and labels; Analogue
-    // (`faces/analogue/`) draws dials, gauges and similar objects. A row's
-    // `theme` overrides the desktop setting.
+    // (`faces/analogue/`) draws dials, gauges and similar objects; Sticker
+    // (`faces/sticker/`) cuts each widget out as coloured stickers that sit
+    // on its squares without filling them. A row's `theme` overrides the
+    // desktop setting.
     readonly property var themes: [
         { id: "modern",   label: "Modern" },
-        { id: "analogue", label: "Analogue" }
+        { id: "analogue", label: "Analogue" },
+        { id: "sticker",  label: "Sticker" }
     ]
 
     function themeOf(widget: var): string {
@@ -98,6 +101,7 @@ Singleton {
         modern: {
             media: ["2x2", "4x2", "4x4"],           timer: ["2x2", "4x2"],
             claude: ["2x2", "4x2", "4x4"],          battery: ["2x2", "4x2"],
+            codex: ["2x2", "4x2", "4x4"],
             volume: ["2x2", "4x2"],                 brightness: ["2x2", "4x2"],
             network: ["2x2", "4x2"],                bluetooth: ["2x2", "4x2"],
             weather: ["2x2", "4x2", "4x4", "8x2"],  stats: ["2x2", "4x2", "4x4"],
@@ -111,9 +115,24 @@ Singleton {
         analogue: {
             media: ["2x2", "4x2", "4x4"],           timer: ["2x2", "4x2"],
             claude: ["2x2", "4x2"],                 battery: ["2x2", "4x2"],
+            codex: ["2x2", "4x2"],
             volume: ["2x2", "4x2"],                 brightness: ["2x2", "4x2"],
             network: ["2x2", "4x2"],                bluetooth: ["2x2", "4x2"],
             weather: ["2x2", "4x2", "4x4", "8x2"],  stats: ["2x2", "4x2", "4x4"],
+            github: ["2x2", "4x2", "8x2"],
+            updates: ["2x2", "4x2"],                pet: ["2x2", "4x2"],
+            games: ["2x2", "4x2"],                  calendar: ["2x2", "4x2", "4x4"],
+            notes: ["2x2", "4x2", "4x4", "8x2"],    tasks: ["2x2", "4x2", "4x4"],
+            clock: ["2x2", "4x2", "4x4", "8x2"],    photo: ["2x2", "4x2", "4x4", "8x2"],
+            spectrum: ["4x2", "8x2", "4x4"]
+        },
+        sticker: {
+            media: ["2x2", "4x2", "4x4"],           timer: ["2x2", "4x2"],
+            claude: ["2x2", "4x2"],                 battery: ["2x2", "4x2"],
+            codex: ["2x2", "4x2"],
+            volume: ["2x2", "4x2"],                 brightness: ["2x2", "4x2"],
+            network: ["2x2", "4x2"],                bluetooth: ["2x2", "4x2"],
+            weather: ["2x2", "4x2", "8x2"],         stats: ["2x2", "4x2"],
             github: ["2x2", "4x2", "8x2"],
             updates: ["2x2", "4x2"],                pet: ["2x2", "4x2"],
             games: ["2x2", "4x2"],                  calendar: ["2x2", "4x2", "4x4"],
@@ -173,7 +192,8 @@ Singleton {
     //
     // The desktop surface covers the whole screen and ignores exclusive zones
     // so drags can cross the bar. The board is the surface minus the bar and
-    // dock reservations; the grid and the decks share these insets.
+    // dock reservations; the decks share these insets, and the grid is laid
+    // out as if there were no dock (`wholeGrid`).
     // One answer for every board: the dock's band is kept clear wherever the
     // dock could be, not where it happens to be painting (`DockService.zone`),
     // so nothing on a grid moves because a window went fullscreen or a hand
@@ -272,10 +292,38 @@ Singleton {
         }
     }
 
+    // Laid out over the screen below the bar, dock or no dock, then placed
+    // on the board, which the dock's inset has moved: the dock is drawn over
+    // the widgets, and reserving, hiding or moving it moves none of them.
+    function wholeGrid(width: real, height: real): var {
+        const grid = root.gridFor(width + root.insets.left + root.insets.right,
+            height + root.insets.bottom + root.zenBand)
+        if (width > 0 && height > 0) {
+            grid.originX -= root.insets.left
+            grid.originY -= root.zenBand
+        }
+        return grid
+    }
+
+    // The screen edge a point on the board is against, measured from the
+    // screen's own edge: the grid runs on under a dock's band, so a square
+    // there is not an edge.
+    function edgeAt(x: real, y: real, width: real, height: real): string {
+        return DeckService.edgeAt(x + root.insets.left, y,
+            width + root.insets.left + root.insets.right, height + root.insets.bottom)
+    }
+
+    // In zen the bar's band is free, and the grid is laid out over the whole
+    // screen, its squares resized so the margins stay even on all four sides.
+    readonly property real zenBand: SettingsService.barHidden ? root.insets.top : 0
+
+    // Every widget off the picture (`desktopHidden`), except while arranging.
+    readonly property bool hidden: SettingsService.desktopHidden && !root.editing
+
     readonly property var grids: {
         const out = {}
         for (const name in root.boards)
-            out[name] = root.gridFor(root.boards[name].width, root.boards[name].height)
+            out[name] = root.wholeGrid(root.boards[name].width, root.boards[name].height)
         return out
     }
 
@@ -337,8 +385,8 @@ Singleton {
     //   style    optional; defaults to the desktop's
     //   opacity  optional; defaults to the desktop's
     //
-    // `normalise` migrates legacy rows: missing `key`, `bare` -> style, and
-    // the removed `ink` field.
+    // `normalise` migrates legacy rows: a missing `key`, and the removed
+    // `bare`, `style` and `ink` fields.
     function normalise(list: var): var {
         const rows = []
         const length = list && typeof list.length === "number" ? list.length : 0
@@ -349,9 +397,8 @@ Singleton {
             const row = Object.assign({}, kept)
             if (!row.key)
                 row.key = row.id
-            if (row.bare === true && !row.style)
-                row.style = "bare"
             delete row.bare
+            delete row.style
             delete row.ink
             rows.push(row)
         }
@@ -869,12 +916,38 @@ Singleton {
         }
         const notes = root.deckNotes(other).concat(
             root.deckNotes(deck).filter(note => root.deckNotes(other).indexOf(note) < 0))
+        const merged = { notes: notes }
+        if (deck.takesNew === true)
+            merged.takesNew = true
         if (root.selected === key)
             root.selected = other.key
         root.write(root.widgets
             .filter(widget => widget.key !== key)
             .map(widget => widget.key === other.key
-                ? Object.assign({}, widget, { notes: notes }) : widget))
+                ? Object.assign({}, widget, merged) : widget))
+    }
+
+    // The one deck new notes land on, if any: `takesNew` on its row, cleared
+    // from every other deck when set, and gone with the deck when it empties.
+    function setTakesNew(key: string, on: bool): void {
+        if (!root.isDeck(root.entryOf(key)))
+            return
+        root.write(root.widgets.map(widget => {
+            if (!root.isDeck(widget))
+                return widget
+            const next = Object.assign({}, widget)
+            if (on && widget.key === key)
+                next.takesNew = true
+            else
+                delete next.takesNew
+            return next
+        }))
+    }
+
+    function noteAdded(noteKey: string): void {
+        const deck = root.decks.find(widget => widget.takesNew === true)
+        if (deck)
+            root.placeNote(noteKey, root.nameOf(deck), deck.edge)
     }
 
     // A note ticked on or off a deck from the inspector.
@@ -1174,33 +1247,25 @@ Singleton {
 
     // ── APPEARANCE ──────────────────────────────────────────────────────────
     //
-    // Style and opacity, like theme, default to the desktop setting unless the
-    // row overrides them. Colours always come from the active palette.
+    // Opacity, like theme, defaults to the desktop setting unless the row
+    // overrides it; it is the solid ground's (`Theme.deskSolid`), since on glass a
+    // capsule is the island's material. Colours always come from the active
+    // palette.
 
-    readonly property var styles: [
-        { id: "capsule", label: "Capsule" },
-        { id: "accent",  label: "Accent" },
-        { id: "outline", label: "Outline" },
-        { id: "bare",    label: "No capsule" }
-    ]
-
-    function styleOf(widget: var): string {
-        // Notes draw their own paper, photos are their picture and the
-        // spectrum is its bars, so all three are always bare.
-        if (widget && (widget.id === "notes" || widget.id === "photo" || widget.id === "spectrum"))
-            return "bare"
-        const own = widget ? widget.style : ""
-        return own && root.styles.some(style => style.id === own)
-            ? own : SettingsService.desktopStyle
+    // Notes draw their own paper, photos are their picture, the spectrum is
+    // its bars and a sticker is cut out of nothing: no capsule.
+    function bare(widget: var): bool {
+        return !!widget && (widget.id === "notes" || widget.id === "photo" || widget.id === "spectrum"
+            || root.themeOf(widget) === "sticker")
     }
+
+    // Whether any widget on the desk draws a capsule, and so has a use for
+    // the ground and the opacity.
+    readonly property bool capsuled: root.widgets.some(widget => !root.bare(widget))
 
     function opacityOf(widget: var): int {
         const own = widget ? widget.opacity : undefined
         return typeof own === "number" ? own : SettingsService.desktopOpacity
-    }
-
-    function setStyle(key: string, style: var): void {
-        root.update(key, { style: style || null })
     }
 
     function setOpacity(key: string, value: var): void {
@@ -1208,9 +1273,8 @@ Singleton {
     }
 
 
-    // Colours for a widget's face, resolved through its style so faces never
-    // read `Theme` directly. The ground is the island black; the accent style
-    // inverts it, with the accent as ground.
+    // Colours for a widget's face, so faces never read `Theme` directly. The
+    // ground is the island black.
     //
     //   ground      the capsule
     //   border      its edge
@@ -1220,26 +1284,20 @@ Singleton {
     //   accentText  content on the accent
     //   raised      tracks, placeholders
     //   dim         a ring's empty track
+    //   red, green, yellow, blue
+    //               the palette's other hues, which a sticker is cut from
+    //   paper       a sticker's die-cut edge
     //
     // All values are `color`, not strings, because faces read `.r` etc. Wrap
     // any literal in `Qt.color()`.
     function inkFor(widget: var): var {
         const ink = {
-            ground: Theme.island, border: Theme.islandBorder,
+            ground: Theme.island, border: Theme.veilLineOf(Theme.deskStyle),
             text: Theme.text, muted: Theme.textMuted,
             accent: Theme.accent, accentText: Theme.accentText,
-            raised: Theme.islandSurfaceHover, dim: Theme.indicatorDim
-        }
-        if (root.styleOf(widget) === "accent") {
-            const onAccent = ink.accentText
-            return {
-                ground: ink.accent, border: Qt.color("transparent"),
-                text: ink.accentText,
-                muted: Qt.rgba(onAccent.r, onAccent.g, onAccent.b, 0.7),
-                accent: ink.accentText, accentText: ink.accent,
-                raised: Qt.rgba(onAccent.r, onAccent.g, onAccent.b, 0.18),
-                dim: Qt.rgba(onAccent.r, onAccent.g, onAccent.b, 0.3)
-            }
+            raised: Theme.veilHoverOf(Theme.deskStyle), dim: Theme.indicatorDim,
+            red: Theme.red, green: Theme.green, yellow: Theme.yellow, blue: Theme.blue,
+            paper: Theme.stickerPaper
         }
         return ink
     }

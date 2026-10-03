@@ -134,7 +134,7 @@ Item {
         hand.y = pointer.y - hand.height / 2
         const name = root.screenName
         const over = DesktopService.overTray(name, pointer.x, pointer.y)
-        const edge = over ? "" : DeckService.edgeAt(pointer.x, pointer.y, root.board.width, root.board.height)
+        const edge = over ? "" : DesktopService.edgeAt(pointer.x, pointer.y, root.board.width, root.board.height)
         DeckService.receivingScreen = name
         DeckService.receiving = DesktopService.spectrumTakes(name, edge) ? edge : ""
         if (over || edge !== "") {

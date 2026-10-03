@@ -135,6 +135,19 @@ alias bonsai="cbonsai -l -k 6,3,14,11"
 # · centred, with seconds, and immune to stray keypresses
 alias clock="tty-clock -c -s -n -C 6"
 
+# · a lava lamp in a gradient from the accent to its bright shade, read from
+#   kitty at launch, with gravity; ANSI cyan where there is no kitty to ask
+lava() {
+  local -A slot
+  local name value
+  kitten @ get-colors 2>/dev/null | while read -r name value; do slot[$name]=${value#\#}; done
+  if [[ -n ${slot[color6]} && -n ${slot[color14]} ]]; then
+    lavat -g -G -c "${slot[color6]}" -k "${slot[color14]}" "$@"
+  else
+    lavat -G -c cyan "$@"
+  fi
+}
+
 
 # ── LOCAL ───────────────────────────────────────────────────────────────────
 

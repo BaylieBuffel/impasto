@@ -9,6 +9,7 @@
 
 import QtQuick
 
+import Quickshell
 import "../../../theme"
 
 // Bot Bash: robots march down five lanes, faster as the score climbs. A click
@@ -195,8 +196,8 @@ FocusScope {
         width: root.cell * root.lanes
         height: root.drop
         radius: Theme.radiusMedium
-        color: Theme.islandSurface
-        border.color: Theme.islandBorder
+        color: Theme.surfaceIn(QsWindow.window)
+        border.color: Theme.borderIn(QsWindow.window)
         border.width: 1
 
         Canvas {

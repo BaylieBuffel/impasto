@@ -9,6 +9,7 @@
 
 import QtQuick
 
+import Quickshell
 import "../../../theme"
 
 // Klondike: seven columns, one card more in each, top cards face up, the rest
@@ -320,8 +321,8 @@ FocusScope {
         width: root.width
         height: root.height
         radius: Theme.radiusMedium
-        color: Theme.islandSurface
-        border.color: Theme.islandBorder
+        color: Theme.surfaceIn(QsWindow.window)
+        border.color: Theme.borderIn(QsWindow.window)
         border.width: 1
 
         Repeater {
@@ -414,7 +415,7 @@ FocusScope {
                     border.color: card.selected ? Theme.accent
                         : card.face.faceUp
                             ? Qt.rgba(Theme.island.r, Theme.island.g, Theme.island.b, 0.35)
-                            : Theme.islandBorder
+                            : Theme.borderIn(QsWindow.window)
 
                     // Card back: the tint with a faint inner frame and a
                     // lattice of diamonds in it.

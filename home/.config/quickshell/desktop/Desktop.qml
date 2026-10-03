@@ -76,6 +76,9 @@ PanelWindow {
     // Namespace for layer rules, e.g. `layerrule = blur, impasto-desktop`. Not
     // set by default.
     WlrLayershell.namespace: "impasto-desktop"
+    // The widgets take the island's glass (`Theme.surfaceIn`).
+    readonly property bool glassy: true
+    readonly property string groundStyle: Theme.deskStyle
 
     // Raised above the windows while arranging, and only then.
     WlrLayershell.layer: root.editing ? WlrLayer.Top : WlrLayer.Bottom
@@ -244,23 +247,42 @@ PanelWindow {
         // The spectra, under the widgets. Each runs past the board to the
         // screen's own edge.
         Repeater {
-            model: DesktopService.spectrumKeysOn(root.screenName)
+            model: ScriptModel {
+                values: DesktopService.spectrumKeysOn(root.screenName)
+            }
 
             EdgeSpectrum {
                 board: surface
                 screenName: root.screenName
+                visible: !DesktopService.hidden
             }
         }
 
         // One widget per key: a Repeater given a new array rebuilds every
         // delegate. The rows change on every drop; the keys only on add and
         // remove.
-        Repeater {
-            model: DesktopService.keysOn(root.screenName)
+        // The board with the dock's band given back, and the bar's in zen,
+        // which is what the grid is laid out over. The widgets sit in it, so
+        // the board moving with the dock moves them not at all instead of
+        // sliding them back into place.
+        Item {
+            id: field
 
-            Widget {
-                board: surface
-                screenName: root.screenName
+            x: -DesktopService.insets.left
+            y: -DesktopService.zenBand
+            width: surface.width + DesktopService.insets.left + DesktopService.insets.right
+            height: surface.height + DesktopService.insets.bottom + DesktopService.zenBand
+            visible: !DesktopService.hidden
+
+            Repeater {
+                model: ScriptModel {
+                    values: DesktopService.keysOn(root.screenName)
+                }
+
+                Widget {
+                    board: surface
+                    screenName: root.screenName
+                }
             }
         }
 
@@ -326,13 +348,15 @@ PanelWindow {
         // Takes no input, ever.
         mask: Region {}
 
-        // The board's part of the screen: the bar and the dock keep their
-        // bands.
+        // The board's part of the screen, and the bar's band in zen, where
+        // the grid reaches into it; the dock keeps its band.
         ClippingRectangle {
+            readonly property real bandTop: DesktopService.insets.top - DesktopService.zenBand
+
             x: DesktopService.insets.left
-            y: DesktopService.insets.top
+            y: bandTop
             width: surface.width
-            height: surface.height
+            height: surface.height + DesktopService.zenBand
             color: "transparent"
             visible: root.editing && root.raised && backdrop.status === Image.Ready
 
@@ -346,7 +370,7 @@ PanelWindow {
                     backdropWindow.screen ? backdropWindow.screen.devicePixelRatio : 1
 
                 x: -DesktopService.insets.left
-                y: -DesktopService.insets.top
+                y: -parent.bandTop
                 width: backdropWindow.width
                 height: backdropWindow.height
                 source: WallpaperService.currentWallpaper !== ""

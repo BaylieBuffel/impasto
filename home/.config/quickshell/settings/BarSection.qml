@@ -102,6 +102,53 @@ SettingsSection {
                 }
             }
 
+            SettingTiles {
+                label: Tr.t("Ground")
+                reading: Tr.t(Theme.glass ? "The terminal's glass, over a blur" : "Solid black")
+
+                Repeater {
+                    model: [
+                        { id: "classic", label: "Classic" },
+                        { id: "glass", label: "Glass" }
+                    ]
+
+                    PreviewTile {
+                        id: groundTile
+
+                        required property var modelData
+
+                        stageHeight: 56
+                        caption: Tr.t(groundTile.modelData.label)
+                        selected: (Theme.solid ? "classic" : SettingsService.surfaceStyle) === groundTile.modelData.id
+                        onPicked: SettingsService.set("surfaceStyle", groundTile.modelData.id)
+
+                        GroundSwatch {
+                            anchors.centerIn: parent
+                            style: groundTile.modelData.id
+                        }
+                    }
+                }
+            }
+
+            // Locked in one capsule, where the sides sit on its band.
+            SettingRow {
+                label: Tr.t("Sides")
+                reading: SettingsService.barSides === "bare"
+                    ? Tr.t("The icons on the wallpaper")
+                    : Tr.t("Each group in a capsule")
+                locked: SettingsService.barStyle === "island"
+                reason: Tr.t("In one island the sides sit on its band")
+
+                SegmentedControl {
+                    options: [
+                        { id: "capsule", label: Tr.t("In capsules") },
+                        { id: "bare", label: Tr.t("On the wallpaper") }
+                    ]
+                    current: SettingsService.barSides
+                    onSelected: id => SettingsService.set("barSides", id)
+                }
+            }
+
             // Only the single-capsule style has a band that can span the
             // screen; locked in the other two.
             SettingRow {
@@ -129,6 +176,18 @@ SettingsSection {
                 ToggleSwitch {
                     checked: SettingsService.barEverywhere
                     onToggled: checked => SettingsService.set("barEverywhere", checked)
+                }
+            }
+
+            SettingRow {
+                label: Tr.t("Zen")
+                reading: SettingsService.barHidden
+                    ? Tr.t("The bar is away; the island still comes down to show something")
+                    : Tr.t("Hides the bar and gives its band to the windows")
+
+                ToggleSwitch {
+                    checked: SettingsService.barHidden
+                    onToggled: checked => SettingsService.set("barHidden", checked)
                 }
             }
 
@@ -209,19 +268,29 @@ SettingsSection {
         SettingGroup {
             title: Tr.t("Beside the time")
             note: Tr.t("What is running sits either side of the time, two at most.")
-            hint: Tr.t("A recording is always there and comes first; click its dot to stop it. Then a countdown, then media, and either still works from its chip on the bar when kept off the island.")
+            hint: Tr.t("A recording is always there and comes first; click its dot to stop it. Then the microphone, camera or screen in use, a countdown and media, which still work from their chips on the bar when kept off the island. The workspace comes last, for a bar without the strip; click it for the overview.")
 
             Repeater {
-                model: SettingsService.besideDefaults
+                model: SettingsService.besideChoices
 
                 SettingRow {
                     id: besideRow
 
                     required property string modelData
 
-                    label: Tr.t(ModuleService.entry(besideRow.modelData).name)
-                    reading: SettingsService.beside(besideRow.modelData)
-                        ? Tr.t("On the island while it runs") : Tr.t("Only where its chip is put")
+                    readonly property bool privacy: besideRow.modelData === "privacy"
+                    readonly property bool workspace: besideRow.modelData === "workspace"
+                    readonly property bool on: SettingsService.beside(besideRow.modelData)
+
+                    label: besideRow.privacy ? Tr.t("Privacy")
+                        : besideRow.workspace ? Tr.t("Workspace")
+                        : Tr.t(ModuleService.entry(besideRow.modelData).name)
+                    reading: besideRow.privacy
+                        ? (besideRow.on ? Tr.t("What uses the microphone, camera or screen") : Tr.t("Not shown"))
+                        : besideRow.workspace
+                            ? (besideRow.on ? Tr.t("The one you are on") : Tr.t("Not shown"))
+                        : besideRow.on
+                            ? Tr.t("On the island while it runs") : Tr.t("Only where its chip is put")
 
                     ToggleSwitch {
                         checked: SettingsService.beside(besideRow.modelData)
@@ -282,52 +351,9 @@ SettingsSection {
         title: Tr.t("Workspaces")
         note: Tr.t("The shown workspaces are always drawn; the rest, up to the available count, appear only while they have windows.")
 
-        // Kept slots solid, the rest hollow (shown only while occupied).
         SettingBlock {
-            Rectangle {
-                Layout.alignment: Qt.AlignHCenter
-                implicitWidth: strip.implicitWidth + 24
-                implicitHeight: 28
-                radius: Theme.radiusPill
-                color: Theme.island
-                border.color: Theme.islandBorder
-                border.width: 1
-
-                Row {
-                    id: strip
-
-                    anchors.centerIn: parent
-                    spacing: 8
-
-                    Repeater {
-                        model: SettingsService.workspaceMax
-
-                        Rectangle {
-                            required property int index
-
-                            readonly property bool focused: index === 0
-                            readonly property bool kept:
-                                index < SettingsService.workspaceCount
-
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: focused ? 22 : 6
-                            height: 6
-                            radius: height / 2
-                            color: focused ? Theme.accent
-                                : (kept ? Theme.indicatorDim : "transparent")
-                            border.color: Theme.indicatorDim
-                            border.width: kept ? 0 : 1
-                            opacity: kept ? 1 : 0.45
-
-                            Behavior on width {
-                                NumberAnimation {
-                                    duration: Theme.durationMedium
-                                    easing.type: Theme.easing
-                                }
-                            }
-                        }
-                    }
-                }
+            WorkspaceStyles {
+                Layout.fillWidth: true
             }
         }
 

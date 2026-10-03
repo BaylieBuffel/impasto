@@ -74,6 +74,21 @@ QtObject {
             "Screen": "Pantalla",
             "Region": "Región",
             "Workspaces": "Espacios de trabajo",
+            "Tray": "Bandeja",
+            "Privacy": "Privacidad",
+            "Sound": "Sonido",
+            "%1 screens": "%1 pantallas",
+            "Screens": "Pantallas",
+            "Warmth": "Calidez",
+            "Presets": "Rápidos",
+            "Candle": "Vela",
+            "Warm": "Cálida",
+            "Soft": "Suave",
+            "Neutral": "Neutra",
+            "Recording": "Grabando",
+            "What uses the microphone, camera or screen": "Qué usa el micrófono, la cámara o la pantalla",
+            "Not shown": "No se muestra",
+            "now": "ahora",
             "Theme": "Tema",
             "Face": "Temática",
             "Style": "Estilo",
@@ -130,6 +145,11 @@ QtObject {
             "Your account, the lock screen and idle behaviour.":
                 "Tu cuenta, la pantalla de bloqueo y la inactividad.",
             "Lock screen": "Pantalla de bloqueo",
+            "Lock": "Bloquear",
+            "Suspend": "Suspender",
+            "Log out": "Cerrar sesión",
+            "Restart": "Reiniciar",
+            "Shut down": "Apagar",
             "When you leave": "Cuando te vas",
             "System": "Sistema",
             "Profiles, language, this machine and reset.":
@@ -199,8 +219,10 @@ QtObject {
                 "Se muestra en la isla en reposo, y más grande en el vistazo.",
             "What is running sits either side of the time, two at most.":
                 "Lo que está en marcha va a los lados de la hora, dos como mucho.",
-            "A recording is always there and comes first; click its dot to stop it. Then a countdown, then media, and either still works from its chip on the bar when kept off the island.":
-                "La grabación siempre está y va primero; haz clic en su punto para pararla. Luego la cuenta atrás y luego la música, y las dos siguen funcionando desde su pieza en la barra si no van en la isla.",
+            "A recording is always there and comes first; click its dot to stop it. Then the microphone, camera or screen in use, a countdown and media, which still work from their chips on the bar when kept off the island. The workspace comes last, for a bar without the strip; click it for the overview.":
+                "Una grabación siempre está y va primero; haz clic en su punto para pararla. Luego el micrófono, la cámara o la pantalla en uso, una cuenta atrás y la música, que siguen funcionando desde su chip en la barra si los quitas de la isla. El escritorio va el último, para una barra sin la tira; haz clic en él para ver la vista general.",
+            "Workspace": "Escritorio",
+            "The one you are on": "En el que estás",
             "On the island while it runs": "En la isla mientras está en marcha",
             "Only where its chip is put": "Solo donde esté su pieza",
 
@@ -215,6 +237,11 @@ QtObject {
             "The bar": "La barra",
             "While it runs": "Mientras está en marcha",
             "Nothing to set: it is drawn one way.": "Nada que ajustar: se dibuja de una sola forma.",
+            "Rings": "Anillos",
+            "Numbers": "Números",
+            "Roman": "Romanos",
+            "Kanji": "Kanji",
+            "Greek": "Griego",
             "Icon shows the module's symbol; Ring draws the gauge of a module that measures something (charge, volume, a countdown) as a circle around it, and the rest keep their symbol. The figure is the value itself, and On hover shows it only while the pointer is over the chip.":
                 "Icono muestra el símbolo del módulo; Anillo dibuja el indicador de los módulos que miden algo (carga, volumen, una cuenta atrás) como un círculo a su alrededor, y los demás se quedan con su símbolo. La cifra es el valor en sí, y Al pasar solo la muestra mientras el cursor está sobre la pieza.",
             "Icon": "Icono",
@@ -350,18 +377,17 @@ QtObject {
             "Arrange widgets": "Colocar widgets",
             "on the wallpaper": "en el fondo",
             "Nothing on the wallpaper yet": "Nada en el fondo todavía",
+            "Hide the widgets": "Ocultar los widgets",
+            "Off the wallpaper until you show them again": "Fuera del fondo hasta que los vuelvas a mostrar",
             "Look": "Aspecto",
             "Every widget follows these unless it was given a look of its own.":
                 "Todos los widgets siguen esto salvo que se les haya dado un aspecto propio.",
-            "While arranging, click a widget to override these for it alone. Modern shows a figure with a caption and Analogue draws an object such as a dial or a gauge; the style and background set what sits behind it.":
-                "Mientras colocas, haz clic en un widget para cambiar esto solo para él. Modern muestra una cifra con un pie y Analógico dibuja un objeto, como una esfera o un indicador; el estilo y el fondo fijan lo que lleva detrás.",
+            "While arranging, click a widget to override these for it alone. Modern shows a figure with a caption, Analogue draws an object such as a dial or a gauge, and Sticker cuts it out as coloured stickers on the wallpaper; the style and background set what sits behind the first two.":
+                "Mientras colocas, haz clic en un widget para cambiar esto solo para él. Modern muestra una cifra con un pie, Analógico dibuja un objeto, como una esfera o un indicador, y Pegatina lo recorta en pegatinas de colores sobre el fondo; el estilo y el fondo fijan lo que llevan detrás los dos primeros.",
 
             "Modern": "Modern",
             "Analogue": "Analógico",
-            "Capsule": "Cápsula",
-            "Accent": "Acento",
-            "Outline": "Contorno",
-            "No capsule": "Sin cápsula",
+            "Sticker": "Pegatina",
             "Small": "Pequeño",
             "Wide": "Ancho",
             "Large": "Grande",
@@ -372,6 +398,7 @@ QtObject {
             "Grid": "Cuadrícula",
             "Along the edge": "A lo largo del borde",
             "Which notes": "Qué notas",
+            "New notes land here": "Las notas nuevas van aquí",
             "Which note": "Qué nota",
             "The newest": "La más reciente",
             "New note": "Nota nueva",
@@ -384,15 +411,39 @@ QtObject {
 
             // ── CONTROL CENTRE ──────────────────────────────────────────────
             "The panel": "El panel",
-            "A six by eight grid, arranged on the panel itself.":
-                "Una cuadrícula de seis por ocho, que se coloca en el propio panel.",
-            "Edit shows the grid with a card of every block, moved by the space between them: drag a block onto the cells, pull a corner or scroll to resize, and drop one on the card to remove it. Escape leaves this mode, the right button on the panel enters or leaves it without opening settings, and a click on a toggles block chooses its switches.":
-                "Editar muestra la cuadrícula con una tarjeta de todos los bloques, que se mueve por el espacio entre ellos: arrastra un bloque a las casillas, tira de una esquina o usa la rueda para cambiar el tamaño, y suelta uno en la tarjeta para quitarlo. Esc sale del modo, con el botón derecho sobre el panel entras o sales sin abrir los ajustes, y haciendo clic en un bloque de conmutadores eliges cuáles lleva.",
+            "Edit shows the grid, its columns and rows under the island, and a card of every block under them. Drag a block onto the cells, pull a corner or scroll to resize it, and drop it on the card to remove it; a click on a toggles or shortcuts block chooses what it carries. Columns come and go on both sides alike, so the blocks stay centred. Escape leaves, and the right button on the panel enters or leaves without opening settings.":
+                "Editar muestra la cuadrícula, sus columnas y filas bajo la isla, y debajo una tarjeta con todos los bloques. Arrastra un bloque a las casillas, tira de una esquina o usa la rueda para cambiar su tamaño, y suéltalo en la tarjeta para quitarlo; haciendo clic en un bloque de conmutadores o de atajos eliges qué lleva. Las columnas se añaden y se quitan por los dos lados a la vez, así que los bloques quedan centrados. Esc sale, y con el botón derecho sobre el panel entras o sales sin abrir los ajustes.",
+            "A grid of the size chosen here, arranged on the panel itself.":
+                "Una cuadrícula del tamaño que elijas aquí, que se coloca en el propio panel.",
+            "Columns": "Columnas",
+            "Rows": "Filas",
+            "Ground": "Fondo",
+            "No widget on the desk has a capsule": "Ningún widget del escritorio tiene cápsula",
+            "Choose the Classic ground above to change it":
+                "Elige el fondo Clásico de arriba para cambiarla",
+            "As the bar": "Como la barra",
+            "Sides": "Laterales",
+            "The icons on the wallpaper": "Los iconos sobre el fondo",
+            "Each group in a capsule": "Cada grupo en una cápsula",
+            "In one island the sides sit on its band": "En una isla los laterales van sobre su banda",
+            "In capsules": "En cápsulas",
+            "On the wallpaper": "Sobre el fondo",
+            "Bar and island": "Barra e isla",
+            "Blur and glass": "Desenfoque y cristal",
+            "What shows through a window.": "Lo que se ve a través de una ventana.",
+            "Solid black": "Negro sólido",
+            "The terminal's glass, over a blur": "El cristal de la terminal, sobre un desenfoque",
+            "Classic": "Clásico",
             "Arrange the control centre": "Colocar el centro de control",
-            "Default layout": "Disposición inicial",
             "The top row": "La fila de arriba",
-            "Session actions always sit on the left. These buttons, which open other panels and this window, fill the row from the right in this order.":
-                "Las acciones de sesión van siempre a la izquierda. Estos botones, que abren otros paneles y esta ventana, llenan la fila desde la derecha en este orden.",
+            "The top row: click to choose its buttons": "La fila de arriba: haz clic para elegir sus botones",
+            "Small buttons over the grid, on either side. With none, there is no row.":
+                "Botones pequeños sobre la cuadrícula, a cualquiera de los dos lados. Sin ninguno, no hay fila.",
+            "Drag a button onto either side; drag it back here to take it off.":
+                "Arrastra un botón a cualquiera de los lados; devuélvelo aquí para quitarlo.",
+            "Every button is on the row": "Todos los botones están en la fila",
+            "Default layout": "Disposición inicial",
+            "Shortcuts": "Atajos",
 
             "System statistics": "Estadísticas del sistema",
             "Workspace overview": "Vista de espacios",
@@ -427,19 +478,24 @@ QtObject {
             "Show the dock": "Mostrar el dock",
             "Edge": "Borde",
             "Alignment": "Alineación",
-            "Everything on the dock scales with the icon size.":
-                "Todo el dock escala con el tamaño de los iconos.",
-            "Background sets how opaque the capsule behind the icons is; lower it to let the blurred wallpaper through.":
-                "Fondo fija la opacidad de la cápsula tras los iconos; bájalo para que se vea el fondo desenfocado.",
+            "Background sets how opaque the classic capsule is; lower it to let the blurred wallpaper through.":
+                "Fondo fija la opacidad de la cápsula clásica; bájalo para que se vea el fondo desenfocado.",
+            "The capsule's ground, and the icon size everything on the dock scales with.":
+                "El fondo de la cápsula, y el tamaño de icono con el que escala todo el dock.",
             "Icon size": "Tamaño de icono",
             "Behaviour": "Comportamiento",
             "What else the dock shows, and which screens it is on.":
                 "Qué más muestra el dock, y en qué pantallas está.",
-            "The launcher button opens the island's launcher, and open applications appear after a divider while they run. Windows always pass under the dock; the desktop keeps its widgets clear of it.":
-                "El botón del lanzador abre el lanzador de la isla, y las aplicaciones abiertas aparecen tras un separador mientras están en marcha. Las ventanas siempre pasan por debajo del dock; el escritorio mantiene sus widgets fuera de él.",
+            "The launcher button opens the island's launcher, and open applications appear after a divider while they run. Windows and widgets pass under the dock, so moving or hiding it moves nothing else.":
+                "El botón del lanzador abre el lanzador de la isla, y las aplicaciones abiertas aparecen tras un separador mientras están en marcha. Las ventanas y los widgets pasan por debajo del dock, así que moverlo u ocultarlo no mueve nada más.",
             "Launcher button": "Botón del lanzador",
             "Open applications": "Aplicaciones abiertas",
             "On every screen": "En todas las pantallas",
+            "Zen": "Zen",
+            "The bar is away; the island still comes down to show something":
+                "La barra no está; la isla sigue bajando para enseñar algo",
+            "Hides the bar and gives its band to the windows":
+                "Oculta la barra y deja su franja a las ventanas",
             "One on each, all showing the same": "Uno en cada una, todos iguales",
             "Only on the screen you are on": "Solo en la pantalla en la que estás",
             "One on each, and the one you are on is the live one":
@@ -489,6 +545,20 @@ QtObject {
             "Note": "Nota",
             "Keep a note": "Guarda una nota",
             "Copy something again": "Vuelve a copiar algo",
+            "Emoji": "Emoji",
+            "Copy an emoji": "Copia un emoji",
+            "Recent": "Recientes",
+            "Smileys & Emotion": "Caras y emociones",
+            "People & Body": "Personas y cuerpo",
+            "Animals & Nature": "Animales y naturaleza",
+            "Food & Drink": "Comida y bebida",
+            "Travel & Places": "Viajes y lugares",
+            "Activities": "Actividades",
+            "Objects": "Objetos",
+            "Symbols": "Símbolos",
+            "Flags": "Banderas",
+            "No animated wallpapers yet. Videos in ~/.local/share/wallpapers/animated show up here.":
+                "Aún no hay fondos animados. Los vídeos que pongas en ~/.local/share/wallpapers/animated aparecen aquí.",
             "Apps": "Aplicaciones",
 
             "Clipboard history": "Historial del portapapeles",
@@ -547,10 +617,11 @@ QtObject {
             "Inactive opacity": "Opacidad inactiva",
 
             "Depth": "Profundidad",
-            "What shows through a window, and what it sits on.":
-                "Qué se ve a través de una ventana, y sobre qué se apoya.",
-            "Blur shows behind anything translucent, such as the terminal. Glass (a Hyprland plugin, tuned in look.lua) frosts and refracts what is behind a window, and the shadow lifts windows and bar capsules off the wallpaper.":
-                "El desenfoque se ve tras todo lo translúcido, como el terminal. El cristal (un plugin de Hyprland, ajustado en look.lua) esmerila y refracta lo que hay detrás de una ventana, y la sombra despega del fondo las ventanas y las cápsulas de la barra.",
+            "Blur shows behind anything translucent, such as the terminal. Glass (a Hyprland plugin, tuned in look.lua) frosts and refracts what is behind a window.":
+                "El desenfoque se ve tras todo lo translúcido, como el terminal. El cristal (un plugin de Hyprland, ajustado en look.lua) esmerila y refracta lo que hay detrás de una ventana.",
+            "What is lifted off the wallpaper.": "Lo que se despega del fondo.",
+            "Bar and dock": "Barra y dock",
+            "Desktop widgets": "Widgets del escritorio",
             "size": "tamaño",
             "Glass": "Cristal",
             "Needs the glass plugin — run ./setup plugins":
@@ -668,14 +739,6 @@ QtObject {
             "None — the system handles the lid": "Ninguna — la tapa la gestiona el sistema",
 
             "Night light": "Luz nocturna",
-            "Warmer colours for the evening.":
-                "Colores más cálidos para la noche.",
-            "It adjusts the gamma ramp, so screenshots keep their original colours. There is no schedule: it stays on until you turn it off.":
-                "Ajusta la rampa gamma, así que las capturas conservan sus colores originales. No hay horario: se queda encendida hasta que la apagas.",
-            "Warm the screen": "Calentar la pantalla",
-            "Needs hyprsunset, which is not installed":
-                "Necesita hyprsunset, que no está instalado",
-            "Colour temperature": "Temperatura de color",
 
             // ── INPUT ───────────────────────────────────────────────────────
             "Layouts": "Distribuciones",
@@ -781,12 +844,7 @@ QtObject {
 
             // ── SESSION ─────────────────────────────────────────────────────
             "You": "Tú",
-            "Left empty, both come from your account, as on the login screen.":
-                "Si los dejas vacíos, ambos salen de tu cuenta, igual que en la pantalla de inicio.",
-            "The name defaults to the account's full name (set with chfn) and the picture to ~/.face or AccountsService. Click the picture or drop an image on the card to change it.":
-                "El nombre es por defecto el nombre completo de la cuenta (se cambia con chfn) y la foto, ~/.face o la de AccountsService. Haz clic en la foto o suelta una imagen sobre la tarjeta para cambiarla.",
             "Picture": "Foto",
-            "— the account's own": "— la de la cuenta",
             "Click it, or drop an image here": "Haz clic, o suelta una imagen aquí",
             "Choose a picture": "Elige una foto",
             "Name": "Nombre",
@@ -883,6 +941,68 @@ QtObject {
             "No remote to compare with": "Sin remoto con el que comparar",
             "WHAT IS WAITING": "LO QUE ESPERA",
             "more": "más",
+
+            "Changed files": "Archivos cambiados",
+            "impasto's own files, as you left them.":
+                "Los archivos de impasto, tal como los dejaste.",
+            "Updates leave a file you deleted deleted, and a file you edited as you edited it, with any newer version beside it as .new. Restore puts impasto's version back; yours, if there was one, is kept in ~/.local/state/impasto/backups.":
+                "Las actualizaciones no vuelven a poner un archivo que borraste, ni tocan uno que editaste: si hay una versión nueva, la dejan al lado como .new. Restaurar vuelve a poner la versión de impasto; la tuya, si la había, se guarda en ~/.local/state/impasto/backups.",
+            "No checkout to restore from": "No hay repositorio del que restaurar",
+            "Every file as installed": "Todo como se instaló",
+            "file edited": "archivo editado",
+            "files edited": "archivos editados",
+            "file deleted": "archivo borrado",
+            "files deleted": "archivos borrados",
+            "Restore all": "Restaurar todo",
+            "Restore": "Restaurar",
+            "DELETED": "BORRADOS",
+            "EDITED": "EDITADOS",
+            "files": "archivos",
+            "newer version waiting": "hay una versión nueva",
+            "Keep mine": "Quedarme la mía",
+            "Use the new one": "Usar la nueva",
+            "Show all": "Ver los",
+            "Show fewer": "Ver menos",
+
+            "Face unlock": "Desbloqueo facial",
+            "The lock screen only, with the infrared camera.":
+                "Solo en la pantalla de bloqueo, con la cámara de infrarrojos.",
+            "howdy keeps the faces where only root can read them, so adding or removing one asks for your password. The login screen, sudo and polkit still ask for the password.":
+                "howdy guarda las caras donde solo root puede leerlas, así que añadir o quitar una pide tu contraseña. La pantalla de inicio de sesión, sudo y polkit siguen pidiendo la contraseña.",
+            "Needs an infrared camera": "Necesita una cámara de infrarrojos",
+            "Set up": "Configurar",
+            "Finish setting up": "Terminar de configurar",
+            "Add a face": "Añadir una cara",
+            "Confirm with your password, then look at the camera":
+                "Confirma con tu contraseña y mira a la cámara",
+            "FACES": "CARAS",
+            "Try it": "Probar",
+            "Try": "Probar",
+            "Looking…": "Mirando…",
+            "Recognised": "Reconocida",
+            "Not recognised": "No reconocida",
+            "Not set up": "Sin configurar",
+            "Half set up": "A medio configurar",
+            "Adding a face…": "Añadiendo una cara…",
+            "Removing…": "Quitando…",
+            "Face added": "Cara añadida",
+            "No face seen — try with more light": "No se vio ninguna cara: prueba con más luz",
+            "More than one face in view": "Hay más de una cara a la vista",
+            "Too dark for the camera": "Demasiado oscuro para la cámara",
+            "The face was not added": "No se añadió la cara",
+            "No face yet": "Ninguna cara todavía",
+            "Face %1": "Cara %1",
+            "%1 face": "%1 cara",
+            "%1 faces": "%1 caras",
+
+            "Your account's name and picture, on the lock and login screens.":
+                "El nombre y la foto de tu cuenta, en la pantalla de bloqueo y en la de inicio de sesión.",
+            "The name is your account's full name, and the picture is kept where the login screen reads it too, made square. Click the picture or drop an image on the card to change it.":
+                "El nombre es el nombre completo de tu cuenta, y la foto se guarda, recortada en cuadrado, donde también la lee la pantalla de inicio de sesión. Haz clic en la foto o suelta una imagen en la tarjeta para cambiarla.",
+            "Saving…": "Guardando…",
+            "The picture was not changed": "La foto no se cambió",
+            "The lock screen only, until ./setup system": "Solo en el bloqueo, hasta ./setup system",
+            "On the lock and login screens": "En el bloqueo y en el inicio de sesión",
 
             "Only the profile in use. The others are left as they were.":
                 "Solo el perfil en uso. Los demás se quedan como estaban.",

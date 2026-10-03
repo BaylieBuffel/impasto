@@ -9,6 +9,7 @@
 
 import QtQuick
 
+import Quickshell
 import "../../../theme"
 
 // Target Smash: one target at a time, shrinking to nothing, faster as the
@@ -105,8 +106,8 @@ FocusScope {
         width: Math.floor(root.width)
         height: Math.floor(root.height)
         radius: Theme.radiusMedium
-        color: Theme.islandSurface
-        border.color: Theme.islandBorder
+        color: Theme.surfaceIn(QsWindow.window)
+        border.color: Theme.borderIn(QsWindow.window)
         border.width: 1
 
         // The range: a field of dots, painted once, so the board is a place

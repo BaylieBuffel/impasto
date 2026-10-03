@@ -188,13 +188,23 @@ Item {
                     NumberAnimation { duration: Theme.durationFast; easing.type: Theme.easing }
                 }
 
+                Connections {
+                    target: LockService
+                    function onTypedChanged(): void {
+                        if (field.text !== LockService.typed)
+                            field.text = LockService.typed
+                    }
+                }
+
                 onAccepted: {
                     root.submitted(field.text)
                     field.clear()
                 }
 
-                // Typing clears the error.
+                // Typing clears the error, and reaches every screen.
                 onTextChanged: {
+                    if (field.text !== LockService.typed)
+                        LockService.typed = field.text
                     if (LockService.failed && field.text !== "")
                         LockService.failed = false
                 }
@@ -207,13 +217,14 @@ Item {
                 }
 
                 // Any other key is somebody there and wakes the screen, bar
-                // Shift and Caps Lock on their own; the key still reaches the
-                // field, so the first character is kept.
+                // Shift and Caps Lock on their own. The key that wakes it only
+                // opens it and types nothing; once awake, keys reach the field.
                 Keys.onPressed: event => {
-                    LockService.wake()
-                    if (event.key !== Qt.Key_Shift && event.key !== Qt.Key_CapsLock)
-                        LockService.rouse()
-                    event.accepted = false
+                    if (event.key === Qt.Key_Shift || event.key === Qt.Key_CapsLock
+                            || event.key === Qt.Key_Escape)
+                        return
+                    event.accepted = !LockService.awake
+                    LockService.rouse()
                 }
             }
 

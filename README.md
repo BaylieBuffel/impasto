@@ -47,8 +47,10 @@ wallpaper and all of it follows.**
 of the bar rests on the time and turns into everything else: the glance under
 the pointer, the control centre, the launcher, the overview, a notification, a
 game — each the size of what is in it, with no title and no close button. What
-is running sits either side of the time, and every module on the bar opens into
-the island rather than into a popup of its own.
+is running sits either side of the time — a countdown, the track, or whatever
+is using the microphone, the camera or the screen — and every module on the bar
+opens into the island rather than into a popup of its own. A notification
+arrives there with its buttons, and stays in the control centre's list.
 
 <p align="center">
   <img src=".github/assets/island-details.jpg" alt="Module details in the island: the player, the battery, Claude Code's usage, the processor and memory, the volume, the Wi-Fi list, the weather, the pet, the month with task dots, the tasks, a countdown and the GitHub wall" width="100%">
@@ -66,7 +68,9 @@ all inside one capsule. A module tells you something and opens its detail; a
 button opens something — any panel the control centre does, the capture
 surface, or Settings. Each shows its symbol or its ring, with its figure
 always, never or under the pointer — two settings for the whole bar, and any
-piece can have a look of its own.
+piece can have a look of its own. The sides sit in capsules or straight on the
+wallpaper, the workspace strip is dots, bars, rings or numbers written out, and
+a tray holds the icons applications put there.
 
 **On more than one screen, every screen gets the whole bar**, and the island is
 live on the one you are typing on. Each screen keeps widgets and notes of its
@@ -82,8 +86,8 @@ monitor over DDC/CI.
 
 **The first character says what the field is for.** Plain text searches
 applications, `=` calculates, `@` finds an open window, `!` starts a countdown,
-`'` is the clipboard history, and `>` is the shell itself — every panel and
-setting by name. Applications are ranked by what you actually launch.
+`'` is the clipboard history, `:` picks an emoji, and `>` is the shell itself —
+every panel and setting by name. Applications are ranked by what you actually launch.
 
 **The dock holds what you pinned, then whatever else is open**, and the same
 pins come first in the launcher. Right-click an icon for its windows by name.
@@ -91,7 +95,7 @@ pins come first in the launcher. Right-click an icon for its windows by name.
 ## The desktop
 
 <p align="center">
-  <img src=".github/assets/desktop-themes.jpg" alt="The same wall of widgets split down the middle: Modern on the left, figures with captions; Analogue on the right, a thermometer, a wall calendar, a battery cell, a knob, gauges, a parcel, a joystick" width="100%">
+  <img src=".github/assets/desktop-themes.jpg" alt="The same desk split in three: Modern on the left, figures with captions; Analogue in the middle, a thermometer, a wall calendar, a battery cell, a knob, a parcel, a joystick; Sticker on the right, die-cut shapes in pastel colours for the weather, the pet, the date, a clock and the processor" width="100%">
 </p>
 
 **Any module can live on the wallpaper**, on a grid, in four shapes: a square,
@@ -100,8 +104,10 @@ holds every module, a corner is pulled for another shape, and a click
 opens that widget's own look — for a photo widget, the picture of your own it
 holds.
 
-**Two themes on the same modules**: *Modern* is a figure with a caption,
-*Analogue* draws each one as an object, and either is a choice per widget. A
+**Three themes on the same modules**: *Modern* is a figure with a caption,
+*Analogue* draws each one as an object, *Sticker* cuts it out as coloured
+stickers that sit on the wallpaper without filling their squares, and any of
+them is a choice per widget. A
 spectrum of whatever is playing sits on the grid as bare bars, or runs along a
 whole edge under the windows.
 
@@ -113,7 +119,10 @@ whole edge under the windows.
 reach everything at once: the island and the widgets, the terminal and the
 prompt, btop, cava, yazi, neovim, VSCodium, the GTK, Qt and KDE windows, Thunar
 down to its folders, Vesktop, Zen and Spotify. Or pick one of nine palettes
-instead. The desk comes with forty paintings, in the style it is named after.
+instead. The desk comes with forty paintings, in the style it is named after,
+and a video of your own in `~/.local/share/wallpapers/animated` can be the
+wallpaper too: it plays under the windows and the palette comes from its first
+frame.
 
 In the terminal, the prompt is laid out like the bar, and `fa` greets you with
 fastfetch beside an animated scene drawn in pixel art out of the palette.
@@ -156,15 +165,18 @@ island, the same clock and the same pill, over a blurred painting. Both rest on
 the clock alone. Any key brings in your account and the field, and is already
 the first letter of your password; Escape sends them away again. The clock is
 stacked or on one line, in Settings → Session → Lock screen, and the login
-screen always stacks it. The face is your initials, or a picture of yours at
-`/var/lib/impasto/faces/<username>.face.icon`.
+screen always stacks it. The picture and the name are your account's, and
+Settings → Session changes them for both screens at once: drop an image on the
+card and it is made square and kept where the login screen reads it; type a
+name and it becomes the account's full name.
 
 **With an infrared camera, the lock opens for your face.** Touch a key or the
 pointer and the island grows under the camera, a ring turns around its
 padlock while it looks, closes green, the padlock opens and the blur lifts off
 the desk. It is its own conversation beside the password, so a face it does
 not know never costs you a try, and the login screen still asks for the
-password after a boot.
+password after a boot. Settings → Session lists the faces it knows, adds
+another, removes one, and lets you try it without locking.
 
 ## Settings
 
@@ -230,7 +242,9 @@ runs `update` in a terminal.
 **Nothing is linked: `setup` copies**, and remembers what it wrote. A file of
 yours already in the way is moved to `~/.local/state/impasto/backups/` first; a
 file you edit afterwards is left alone, with the new version beside it as
-`<name>.new`. Editing the repository itself? `./setup sync` copies it onto the
+`<name>.new`, and one you delete stays deleted — the wallpapers you do not want,
+say. Settings → System lists both, each with a button to put impasto's version
+back. Editing the repository itself? `./setup sync` copies it onto the
 desk, and `./setup sync --watch` keeps doing it on every save.
 
 Every package is listed in `packages/pacman.txt` and `packages/aur.txt`, grouped

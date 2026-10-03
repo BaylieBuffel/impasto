@@ -9,6 +9,7 @@
 
 import QtQuick
 
+import Quickshell
 import "../../../theme"
 
 // Lights Out: pressing a light flips it and its four neighbours; the round
@@ -118,8 +119,8 @@ FocusScope {
         width: root.span + 2 * root.pad
         height: width
         radius: Theme.radiusMedium
-        color: Theme.islandSurface
-        border.color: Theme.islandBorder
+        color: Theme.surfaceIn(QsWindow.window)
+        border.color: Theme.borderIn(QsWindow.window)
         border.width: 1
 
         // The model is the count, not the array: given the array, the Repeater
@@ -167,8 +168,8 @@ FocusScope {
 
                     anchors.fill: parent
                     radius: width / 2
-                    color: light.lit ? root.tint : Theme.islandSurfaceHover
-                    border.color: light.lit ? Qt.lighter(root.tint, 1.4) : Theme.islandBorder
+                    color: light.lit ? root.tint : Theme.surfaceHoverIn(QsWindow.window)
+                    border.color: light.lit ? Qt.lighter(root.tint, 1.4) : Theme.borderIn(QsWindow.window)
                     border.width: 1
                     scale: 1
 

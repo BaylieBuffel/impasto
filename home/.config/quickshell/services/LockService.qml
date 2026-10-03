@@ -23,7 +23,9 @@ import "../theme"
 // has to finish before the lock surface is mapped. It goes to the runtime
 // directory (tmpfs, user-only) and is deleted on unlock.
 //
-// The password is handed straight to PAM's `respond` and never stored. A face
+// The password is handed straight to PAM's `respond` and never stored past
+// the field it is typed in, which every screen shares and which empties on
+// sending, on rest and on unlock. A face
 // is a second PAM conversation beside it, where `./setup face` has put howdy.
 Singleton {
     id: root
@@ -47,6 +49,10 @@ Singleton {
     // Escape or a while untouched puts it back.
     property bool awake: false
 
+    // What is typed, one field for every screen: each surface shows it and
+    // writes to it, so the dots are the same wherever the keyboard is.
+    property string typed: ""
+
     // How long an awake screen waits untouched before going back to its
     // clock.
     readonly property int awakeFor: 30000
@@ -56,12 +62,17 @@ Singleton {
             return
         root.awake = true
         root.drowse.restart()
+        root.wake()
     }
 
-    // Surfaces clear their field when this falls.
+    // Surfaces clear their field when this falls, and a scan under way stops.
     function rest(): void {
         root.drowse.stop()
         root.awake = false
+        root.typed = ""
+        if (root.face.active)
+            root.face.abort()
+        root.faceScanning = false
         root.failed = false
         root.message = ""
     }
@@ -74,15 +85,23 @@ Singleton {
 
     readonly property string shotDirectory:
         `${Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"}/quickshell`
-    readonly property string shotPath: `${root.shotDirectory}/lock.jpg`
+
+    // One picture per screen, named by its output, so each surface shows
+    // its own screen rather than all of them squeezed into one.
+    function shotPath(output: string): string {
+        return `${root.shotDirectory}/lock-${output}.jpg`
+    }
 
     // Bumped per capture so the Image source changes and Qt does not serve
     // the previous lock's cached frame.
     property int shotSerial: 0
     property bool shotReady: false
 
-    readonly property string shotSource:
-        root.shotReady ? `file://${root.shotPath}?v=${root.shotSerial}` : ""
+    // Empty when that screen's capture failed, and the surface stays black.
+    function shotSource(output: string): string {
+        return root.shotReady && output
+            ? `file://${root.shotPath(output)}?v=${root.shotSerial}` : ""
+    }
 
     signal unlocked()
 
@@ -104,6 +123,7 @@ Singleton {
         root.faceScanning = false
         root.faceMatched = false
         root.faceCheck.running = true
+        FaceService.refresh()
         root.shotReady = false
         // Capture first, surface second — and only once the island has
         // closed, or the screenshot shows the panel the lock came from.
@@ -147,7 +167,17 @@ Singleton {
         root.pendingCapture = false
         root.settleFrame.stop()
         root.quietGiveUp.stop()
+        root.capture.command = ["sh", "-c", root.captureScript()]
         root.capture.running = true
+    }
+
+    // Every screen at once, each into its own file, and the lock waits for
+    // the slowest.
+    function captureScript(): string {
+        const shots = Quickshell.screens
+            .filter(screen => /^[A-Za-z0-9_.-]+$/.test(screen.name))
+            .map(screen => `timeout 2 grim -t jpeg -q 90 -o '${screen.name}' '${root.shotPath(screen.name)}' &`)
+        return `mkdir -p '${root.shotDirectory}' && rm -f '${root.shotDirectory}'/lock-*.jpg; ${shots.join(" ")} wait`
     }
 
     // grim hangs instead of failing when the output is already powered off,
@@ -155,9 +185,6 @@ Singleton {
     // the picture is shown blurred and PNG takes seconds over a painting on a
     // large or doubled screen.
     readonly property Process capture: Process {
-        command: ["sh", "-c",
-            `mkdir -p '${root.shotDirectory}' && timeout 2 grim -t jpeg -q 90 '${root.shotPath}'`]
-
         // Lock whether or not the screenshot worked.
         onExited: (code, status) => {
             root.shotSerial += 1
@@ -170,12 +197,13 @@ Singleton {
     }
 
     function forget(): void {
+        root.typed = ""
         root.shotReady = false
         root.eraser.running = true
     }
 
     readonly property Process eraser: Process {
-        command: ["rm", "-f", root.shotPath]
+        command: ["sh", "-c", `rm -f '${root.shotDirectory}'/lock-*.jpg`]
     }
 
     // ── AUTHENTICATING ──────────────────────────────────────────────────────
@@ -245,8 +273,11 @@ Singleton {
     // A PAM service of its own, `impasto-face`, beside the password and never
     // inside `login`: a face that is not recognised does not count against
     // the password's attempts, and the password never waits for the camera.
-    // Ready where `./setup system` put the service and `./setup face` put howdy.
-    property bool faceReady: false
+    // Ready where `./setup system` put the service and `./setup face` put howdy,
+    // and a face has been enrolled — when the list could be read at all.
+    property bool facePam: false
+    readonly property bool faceReady: root.facePam
+        && (!FaceService.listed || FaceService.faces.length > 0)
 
     // From howdy's first message, which is the camera coming on, until the
     // scan ends. A refusal with nothing said first is howdy declining to look
@@ -255,8 +286,9 @@ Singleton {
     property bool faceMatched: false
     signal faceMissed()
 
-    // A scan starts on a key, the pointer or the lid, never on its own: the
-    // camera would otherwise find the face that has just locked the screen.
+    // A scan starts only on an awake screen — on waking it, by a key, a click
+    // or the lid, or on the pointer while it is — never on its own: the camera would otherwise
+    // find the face that has just locked the screen.
     // A miss rests long enough for its shake to be seen, and after three only
     // Enter on an empty field asks again.
     readonly property int faceRest: 1500
@@ -269,7 +301,7 @@ Singleton {
     readonly property int faceHold: 650
 
     function wake(): void {
-        if (root.faceMisses >= root.faceTries || Date.now() < root.faceQuietUntil)
+        if (!root.awake || root.faceMisses >= root.faceTries || Date.now() < root.faceQuietUntil)
             return
         root.scan()
     }
@@ -284,7 +316,7 @@ Singleton {
     readonly property Process faceCheck: Process {
         command: ["sh", "-c",
             "test -f /etc/pam.d/impasto-face && test -f /usr/lib/security/pam_howdy.so"]
-        onExited: code => root.faceReady = code === 0
+        onExited: code => root.facePam = code === 0
     }
 
     readonly property PamContext face: PamContext {
@@ -295,7 +327,7 @@ Singleton {
         onCompleted: result => {
             const looked = root.faceScanning
             root.faceScanning = false
-            if (!root.locked || root.leaving)
+            if (!root.locked || root.leaving || !root.awake)
                 return
             if (result === PamResult.Success) {
                 root.faceMatched = true

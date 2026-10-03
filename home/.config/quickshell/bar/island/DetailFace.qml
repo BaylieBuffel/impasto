@@ -34,8 +34,8 @@ Item {
 
     Loader {
         anchors.fill: parent
-        // A menu is laid out for a panel's margins; a card brings its own.
-        anchors.margins: root.menu !== "" ? Theme.panelPadding - 4 : 0
+        // A card brings its own margins; a menu takes the same ones.
+        anchors.margins: root.menu !== "" ? Theme.cardPadding : 0
         sourceComponent: root.menu === "wifi" ? wifi
             : root.menu === "bluetooth" ? bluetooth
             : root.month ? calendar : card
@@ -47,7 +47,7 @@ Item {
         // Bare: the island is the card.
         CalendarCard {
             bare: true
-            padding: 12
+            padding: Theme.cardPadding
             onPanelRequested: panel => ModuleService.requestPanel(panel)
         }
     }

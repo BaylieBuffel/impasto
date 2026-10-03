@@ -71,12 +71,22 @@ Item {
         width: root.moduleId === "pet" ? root.size + 2 : (symbol.visible ? symbol.implicitWidth : root.size)
         height: root.size + 2
 
-        // Claude and the pet have no font glyph and draw their own mark at
-        // glyph size.
+        // Claude, Codex and the pet have no font glyph and draw their own
+        // mark at glyph size.
         Loader {
             anchors.centerIn: parent
             active: !root.ring && root.moduleId === "claude"
             sourceComponent: ClaudeMark {
+                width: root.size
+                height: root.size
+                color: root.tint
+            }
+        }
+
+        Loader {
+            anchors.centerIn: parent
+            active: !root.ring && root.moduleId === "codex"
+            sourceComponent: CodexMark {
                 width: root.size
                 height: root.size
                 color: root.tint
@@ -97,7 +107,7 @@ Item {
             id: symbol
 
             anchors.centerIn: parent
-            visible: root.moduleId !== "claude" && root.moduleId !== "pet"
+            visible: root.moduleId !== "claude" && root.moduleId !== "codex" && root.moduleId !== "pet"
             text: ModuleService.glyphOf(root.moduleId)
             font.family: Theme.fontMono
             font.pixelSize: root.size

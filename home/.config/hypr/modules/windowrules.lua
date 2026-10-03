@@ -183,12 +183,12 @@ hl.window_rule({
 -- · blur behind the desktop widgets, so translucent backgrounds stay legible
 --
 -- The layer covers the whole screen, so ignore_alpha is required or the
--- entire wallpaper gets blurred. 0.15 is below the widget opacity slider's
--- 20% floor.
+-- entire wallpaper gets blurred. 0.12 matches the bar and the dock, and is
+-- below the widget opacity slider's 20% floor.
 hl.layer_rule({
     name  = "impasto-desktop-blur",
     match = { namespace = "^(impasto-desktop)$" },
 
     blur         = true,
-    ignore_alpha = 0.15,
+    ignore_alpha = 0.12,
 })

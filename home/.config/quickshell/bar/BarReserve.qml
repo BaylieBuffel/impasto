@@ -12,6 +12,7 @@ import Quickshell
 import Quickshell.Wayland
 
 import "../theme"
+import "../services"
 
 // One strip per screen, a pixel tall and painting nothing, whose only job is
 // the exclusive zone. The bars reserve nothing themselves, so a bar replaced
@@ -28,7 +29,8 @@ PanelWindow {
 
     implicitHeight: 1
     color: "transparent"
-    exclusiveZone: Theme.barReserve
+    // Nothing in zen, so the windows take the band.
+    exclusiveZone: SettingsService.barHidden ? 0 : Theme.barReserve
 
     // Under everything, and deaf.
     WlrLayershell.layer: WlrLayer.Background

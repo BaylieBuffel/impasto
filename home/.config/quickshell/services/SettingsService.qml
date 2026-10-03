@@ -34,6 +34,7 @@ Singleton {
     readonly property alias barSideMargin: config.barSideMargin
     readonly property alias barStyle: config.barStyle
     readonly property alias barEverywhere: config.barEverywhere
+    readonly property alias barHidden: config.barHidden
     readonly property alias barLeft: config.barLeft
     readonly property alias barRight: config.barRight
     readonly property alias islandSummary: config.islandSummary
@@ -42,10 +43,13 @@ Singleton {
     readonly property alias chipFigure: config.chipFigure
     readonly property alias desktopWidgets: config.desktopWidgets
     readonly property alias desktopTheme: config.desktopTheme
-    readonly property alias desktopStyle: config.desktopStyle
     readonly property alias desktopOpacity: config.desktopOpacity
+    readonly property alias desktopHidden: config.desktopHidden
     readonly property alias centreButtons: config.centreButtons
+    readonly property alias centreTop: config.centreTop
     readonly property alias centreBlocks: config.centreBlocks
+    readonly property alias centreColumns: config.centreColumns
+    readonly property alias centreRows: config.centreRows
     readonly property alias centreToggles: config.centreToggles
     readonly property alias dockEnabled: config.dockEnabled
     readonly property alias dockPinned: config.dockPinned
@@ -53,6 +57,7 @@ Singleton {
     readonly property alias dockAlignment: config.dockAlignment
     readonly property alias dockIconSize: config.dockIconSize
     readonly property alias dockOpacity: config.dockOpacity
+    readonly property alias dockGround: config.dockGround
     readonly property alias dockRunning: config.dockRunning
     readonly property alias dockEverywhere: config.dockEverywhere
     readonly property alias dockAutohide: config.dockAutohide
@@ -63,6 +68,7 @@ Singleton {
     readonly property alias launcherResults: config.launcherResults
     readonly property alias launcherOrder: config.launcherOrder
     readonly property alias launcherFits: config.launcherFits
+    readonly property alias emojiTone: config.emojiTone
     readonly property alias clipboardHistory: config.clipboardHistory
     readonly property alias clipboardKeep: config.clipboardKeep
     readonly property alias clipboardImages: config.clipboardImages
@@ -80,11 +86,17 @@ Singleton {
     readonly property alias spectrumOnEmpty: config.spectrumOnEmpty
     readonly property alias workspaceCount: config.workspaceCount
     readonly property alias workspaceMax: config.workspaceMax
+    readonly property alias workspaceStyle: config.workspaceStyle
     readonly property alias motionScale: config.motionScale
     readonly property alias motionCurve: config.motionCurve
     readonly property alias animationPreset: config.animationPreset
     readonly property alias windowShadow: config.windowShadow
+    readonly property alias barShadow: config.barShadow
+    readonly property alias widgetShadow: config.widgetShadow
     readonly property alias windowGlass: config.windowGlass
+    readonly property alias surfaceStyle: config.surfaceStyle
+    readonly property alias desktopGround: config.desktopGround
+    readonly property alias barSides: config.barSides
     readonly property alias wallpaperTransition: config.wallpaperTransition
     readonly property alias greeting: config.greeting
     readonly property alias fontFamily: config.fontFamily
@@ -112,7 +124,8 @@ Singleton {
     // The first character that selects each launcher mode. Stored as
     // overrides keyed by mode id, so a new mode needs no new key.
     readonly property var launcherPrefixDefaults: ({
-        calculate: "=", desk: ">", windows: "@", timer: "!", clipboard: "'"
+        calculate: "=", desk: ">", windows: "@", timer: "!", clipboard: "'",
+        emoji: ":"
     })
 
     function launcherPrefix(id: string): string {
@@ -147,11 +160,12 @@ Singleton {
         { id: "island",  label: "One island", note: "Everything inside a single capsule." }
     ]
 
-    // Used while `barLeft`/`barRight` are null. `workspaces` is the strip and
-    // `split` starts a new capsule; neither is a module.
+    // Used while `barLeft`/`barRight` are null. `workspaces` is the strip,
+    // `tray` the applications' icons and `split` starts a new capsule; none is
+    // a module. The tray is not drawn while it is empty.
     readonly property var barDefaults: ({
         left: ["workspaces"],
-        right: ["notifications", "network", "bluetooth", "volume", "battery", "tray"]
+        right: ["tray", "notifications", "network", "bluetooth", "volume", "battery"]
     })
 
     // An entry is a bare id, or `{ id, shape, figure, when }` when the piece
@@ -213,10 +227,13 @@ Singleton {
         root.set(side === "left" ? "barLeft" : "barRight", packed)
     }
 
-    // Modules allowed beside the time on the island while running. One left
+    // What may sit beside the time on the island while it runs. A module left
     // out still works on the bar; it just doesn't take a side of the island.
-    // A recording is always there, and is not on this list.
-    readonly property var besideDefaults: ["timer", "media"]
+    // `privacy` is the microphone, camera or screen in use, which has no
+    // module. A recording is always there, and is not on this list.
+    readonly property var besideDefaults: ["privacy", "timer", "media"]
+    // Every one the settings offer; the workspace is off until chosen.
+    readonly property var besideChoices: ["privacy", "timer", "media", "workspace"]
 
     function beside(id: string): bool {
         const kept = config.islandActivities
@@ -240,6 +257,18 @@ Singleton {
     readonly property var chipShapes: [
         { id: "icon", label: "Icon", note: "The symbol alone, small." },
         { id: "ring", label: "Ring", note: "The gauge, in a circle." }
+    ]
+
+    // How the workspace strip draws a workspace: shapes first, then the
+    // number written out.
+    readonly property var workspaceStyles: [
+        { id: "dots", label: "Dots" },
+        { id: "bars", label: "Bars" },
+        { id: "rings", label: "Rings" },
+        { id: "numbers", label: "Numbers" },
+        { id: "roman", label: "Roman" },
+        { id: "kanji", label: "Kanji" },
+        { id: "greek", label: "Greek" }
     ]
 
     readonly property var chipFigures: [
@@ -279,7 +308,8 @@ Singleton {
     readonly property var machineKeys: [
         "displays", "lidPolicy",
         "userName", "userAvatar", "language", "keyboard", "weatherPlace", "githubUser",
-        "doNotDisturb", "nightLight", "nightTemperature",
+        "emojiTone",
+        "doNotDisturb", "nightLight", "nightTemperature", "barHidden", "desktopHidden",
         "recorderAudio", "captureShape", "captureKind"
     ]
 
@@ -399,7 +429,13 @@ Singleton {
         // one turn reads back a stale `var` value and loses the second
         // change. Coalescing also means one write per turn (`adopt()`).
         onAdapterUpdated: saver.restart()
-        onLoaded: root.arrived = true
+        onLoaded: {
+            root.arrived = true
+            // A ground named "frosted" is read as glass.
+            for (const key of ["surfaceStyle", "desktopGround", "dockGround"])
+                if (config[key] === "frosted")
+                    config[key] = "glass"
+        }
         // First run: write the defaults, which then count as read.
         onLoadFailed: error => {
             if (error === FileViewError.FileNotFound) {
@@ -448,11 +484,31 @@ Singleton {
         // surface is on every screen either way: this is whether it paints.
         property bool barEverywhere: true
 
+        // Zen: the bar off the screen and its band given to the windows; the
+        // island still comes down for what it has to show.
+        property bool barHidden: false
+
+        // Three shadows, one per layer: Hyprland's under the windows, the
+        // shell's under the bar and the dock, and under the desk's widgets.
         property bool windowShadow: false
+        property bool barShadow: false
+        property bool widgetShadow: false
 
         // hyprglass. Dimmed in the settings when the plugin is not built;
         // `CompositorService` pushes it at login and after every reload.
         property bool windowGlass: false
+
+        // The island's and the bar's ground: "classic" solid black, or
+        // "glass", the terminal's ground over the compositor's blur
+        // (`Theme.islandGround`).
+        property string surfaceStyle: "classic"
+
+        // The desktop widgets' ground, as above, or "" for the bar's.
+        property string desktopGround: ""
+
+        // The bar's sides: "capsule", each group in a capsule, or "bare",
+        // the icons on the wallpaper. The one-capsule style has its band.
+        property string barSides: "capsule"
 
         // Row id from `WallpaperService.transitions`; `random` picks anew on
         // each change.
@@ -490,6 +546,10 @@ Singleton {
         // list. Off by default: a list that holds still is easier to aim at.
         // `launcherResults` caps it either way.
         property bool launcherFits: false
+
+        // Skin tone for emoji that have one: 0 is the default yellow, 1 to 5
+        // light to dark. The person's, so it stays with the machine.
+        property int emojiTone: 0
 
         // ── CLIPBOARD ───────────────────────────────────────────────
         //
@@ -541,6 +601,9 @@ Singleton {
         // past `workspaceCount` still show while occupied.
         property int workspaceCount: 5
         property int workspaceMax: 10
+        // How the strip draws each workspace: a shape (`dots`, `bars`, `rings`)
+        // or its number written out (`numbers`, `roman`, `kanji`, `greek`).
+        property string workspaceStyle: "dots"
 
         // Percentage. 100 is the designed speed; 0 disables animation.
         property int motionScale: 100
@@ -624,7 +687,8 @@ Singleton {
         //   screen   the monitor's description; absent means the main screen
         //   col, row the square its top left corner is on
         //   family   "2x2", "4x2", "4x4" or "8x2" — which face it wears
-        //   theme    "modern" or "analogue"; absent means the desktop's
+        //   theme    "modern", "analogue" or "sticker"; absent means the
+        //            desktop's
         //   style    how its capsule is drawn; absent means the desktop's
         //   opacity  how solid it is; absent means the desktop's
         //   note     for a notes widget, which note; absent means the
@@ -637,24 +701,37 @@ Singleton {
         //   screen   as above
         //   edge     "left", "right" or "bottom"
         //   notes    the note keys on it, in order along the edge
+        //   along    where on the edge, 0 to 1 from its first corner
+        //   takesNew true on the one deck new notes land on
         property var desktopWidgets: []
 
-        // Defaults for widgets without their own: a theme from
-        // `DesktopService.themes` and a style from `DesktopService.styles`.
-        // Colours always come from the palette.
+        // The theme for widgets without their own, from
+        // `DesktopService.themes`. Colours always come from the palette, and
+        // the capsule's ground is the island's (`surfaceStyle`).
         property string desktopTheme: "modern"
-        property string desktopStyle: "capsule"
 
         // Capsule opacity in percent; below 100 the desktop layer's blur
         // rule (`windowrules.lua`) shows through. Widgets may override it.
         property int desktopOpacity: 100
 
+        // Every widget off the picture for a while; arranging shows them.
+        property bool desktopHidden: false
+
         // ── CONTROL CENTRE ──────────────────────────────────────────────
         //
-        // Top-row buttons, ids from `ControlsService.doors`. Null means the
-        // service default, so buttons added later still appear; [] means
-        // none.
+        // The top row's doors before `centreTop`, ids from
+        // `ControlsService.doors`; read only as that row's default.
         property var centreButtons: null
+
+        // The top row: `{ left, right }`, session action and door ids in
+        // order. Null is the session's actions left and the doors above
+        // right; two empty sides are no row at all.
+        property var centreTop: null
+
+        // The grid's columns and rows; 0 is the default the default layout
+        // fills.
+        property int centreColumns: 0
+        property int centreRows: 0
 
         // The blocks on the control centre's grid, one row each:
         //
@@ -691,6 +768,9 @@ Singleton {
 
         // Percent; the compositor blurs behind the layer.
         property int dockOpacity: 100
+
+        // The capsule's ground, as `surfaceStyle`, or "" for the bar's.
+        property string dockGround: ""
 
         // Also show running applications that aren't pinned.
         property bool dockRunning: true

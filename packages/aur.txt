@@ -17,6 +17,11 @@
 bibata-cursor-theme-bin      # the XCursor env.lua names, for clients with no hyprcursor
 
 
+# ── WALLPAPER ───────────────────────────────────────────────────────────────
+
+mpvpaper                     # plays an animated wallpaper
+
+
 # ── CAPTURE ─────────────────────────────────────────────────────────────────
 
 wl-screenrec                 # the recorder's GPU encoder, tried before wf-recorder
@@ -27,6 +32,7 @@ wl-screenrec                 # the recorder's GPU encoder, tried before wf-recor
 unimatrix-git                # the matrix alias
 cbonsai                      # the bonsai alias
 tty-clock                    # the clock alias
+lavat                        # the lava function
 
 
 # ── THEMED APPLICATIONS ─────────────────────────────────────────────────────

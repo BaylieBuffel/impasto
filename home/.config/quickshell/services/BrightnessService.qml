@@ -14,6 +14,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
+import "../theme"
+
 // One entry per screen. The laptop panel is the backlight, watched on sysfs
 // so the OSD also reacts to the hardware keys, and set through brightnessctl.
 // An external monitor is set over DDC/CI with ddcutil, on the I2C bus that
@@ -37,6 +39,14 @@ Singleton {
     readonly property bool available: root.current !== null
     readonly property int percent: root.current?.percent ?? 0
     readonly property string icon: root.iconFor(root.percent)
+
+    // The brightness page, reached only with more than one screen to dim:
+    // declared, since the island takes its size before the panel exists — a
+    // heading and a level for each screen.
+    readonly property bool several: root.dimmable.length > 1
+    readonly property int panelWidth: 440
+    readonly property int panelHeight: 2 * Theme.panelPadding + Theme.detailHeader
+        + Theme.detailSection(root.dimmable.length)
 
     function iconFor(percent: int): string {
         if (percent < 34)

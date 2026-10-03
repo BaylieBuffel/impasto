@@ -10,11 +10,11 @@
 
 """Compare what was installed from a checkout with that checkout's remote.
 
-The checkout is told, never looked for: `setup sync` records its path and the
-version it copied, and the shell passes both in. `check` fetches first and
-`status` answers from what was fetched before. The fetch never asks for
-anything — no terminal prompt, no ssh password — so a remote needing
-credentials is offline rather than a wait.
+The checkout is told, never looked for: `setup sync` records its path, the
+version it copied and the tree of what it copied, and the shell passes them
+in. `check` fetches first and `status` answers from what was fetched before.
+The fetch never asks for anything — no terminal prompt, no ssh password — so a
+remote needing credentials is offline rather than a wait.
 
 Nothing is pulled and nothing is installed: the update runs in a terminal the
 shell opens.
@@ -57,7 +57,23 @@ def installed_commit(repo, version):
     return out(git(repo, "rev-parse", "--verify", "--quiet", f"{name}^{{commit}}"))
 
 
-def report(repo, fetch, version=""):
+def synced_commit(repo, base, upstream, tree):
+    """The newest commit on the way whose tree is the one a sync copied.
+
+    Edits synced before they were committed are on the desk already; the
+    commit that records them, and every one before it, is not waiting.
+    """
+    if not tree:
+        return ""
+    for line in out(git(repo, "log", "--format=%H %T",
+                        f"{base}..{upstream}")).splitlines():
+        commit, _, commit_tree = line.partition(" ")
+        if commit_tree == tree:
+            return commit
+    return ""
+
+
+def report(repo, fetch, version="", tree=""):
     if not repo or out(git(repo, "rev-parse", "--is-inside-work-tree")) != "true":
         return {"available": False}
 
@@ -93,6 +109,7 @@ def report(repo, fetch, version=""):
     # Waiting is counted from what was installed: a pull that landed and an
     # install that stopped leave HEAD current and the desk behind it.
     base = installed_commit(repo, version) or "HEAD"
+    base = synced_commit(repo, base, upstream, tree) or base
     if base != "HEAD":
         waiting = out(git(repo, "rev-list", "--count", f"{base}..{upstream}"))
         if waiting.isdigit():
@@ -116,11 +133,12 @@ def main():
     verb = sys.argv[1] if len(sys.argv) > 1 else "status"
     repo = sys.argv[2] if len(sys.argv) > 2 else ""
     version = sys.argv[3] if len(sys.argv) > 3 else ""
+    tree = sys.argv[4] if len(sys.argv) > 4 else ""
     if verb not in ("status", "check"):
         print(f"Unknown verb: {verb}", file=sys.stderr)
         print(json.dumps({"available": False}))
         return
-    print(json.dumps(report(repo, verb == "check", version)))
+    print(json.dumps(report(repo, verb == "check", version, tree)))
 
 
 if __name__ == "__main__":

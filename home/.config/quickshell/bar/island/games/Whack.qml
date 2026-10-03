@@ -8,6 +8,7 @@
 // ╰──────────────────────────────────────────────────────────────────────────╯
 
 import QtQuick
+import Quickshell
 import QtQuick.Shapes
 
 import "../../../theme"
@@ -173,8 +174,8 @@ FocusScope {
         width: root.cell * root.columns
         height: root.cell * root.rows
         radius: Theme.radiusMedium
-        color: Theme.islandSurface
-        border.color: Theme.islandBorder
+        color: Theme.surfaceIn(QsWindow.window)
+        border.color: Theme.borderIn(QsWindow.window)
         border.width: 1
 
         // Time left, draining from the right.
@@ -187,7 +188,7 @@ FocusScope {
             }
             height: Math.max(2, Math.round(root.cell * 0.03))
             radius: height / 2
-            color: Theme.islandBorder
+            color: Theme.borderIn(QsWindow.window)
 
             // Animated, so a miss's two seconds visibly drain rather than jump.
             Rectangle {
@@ -215,7 +216,7 @@ FocusScope {
                 readonly property bool missed:
                     hole.index === root.missHole && root.missLeft > 0
                 readonly property color earth: hole.missed
-                    ? Theme.red : Theme.islandSurfaceHover
+                    ? Theme.red : Theme.surfaceHoverIn(QsWindow.window)
 
                 x: (hole.index % root.columns) * root.cell
                 y: Math.floor(hole.index / root.columns) * root.cell
@@ -418,7 +419,7 @@ FocusScope {
                         height: parent.height * 0.3
                         radius: height / 2
                         opacity: 0.4
-                        color: Theme.islandBorder
+                        color: Theme.borderIn(QsWindow.window)
                     }
                 }
 

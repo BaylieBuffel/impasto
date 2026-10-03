@@ -9,6 +9,7 @@
 
 import QtQuick
 
+import Quickshell
 import "../../../theme"
 
 // Tetris: a 10×20 well and seven-bag randomisation. Left and right move, up
@@ -340,8 +341,8 @@ FocusScope {
             width: root.cell * root.columns
             height: root.cell * root.rows
             radius: Theme.radiusMedium
-            color: Theme.islandSurface
-            border.color: Theme.islandBorder
+            color: Theme.surfaceIn(QsWindow.window)
+            border.color: Theme.borderIn(QsWindow.window)
             border.width: 1
 
             // A sweep flashes the well and says what it paid, over the stack.
@@ -446,8 +447,8 @@ FocusScope {
                 width: root.panel
                 height: root.panel
                 radius: Theme.radiusMedium
-                color: Theme.islandSurface
-                border.color: Theme.islandBorder
+                color: Theme.surfaceIn(QsWindow.window)
+                border.color: Theme.borderIn(QsWindow.window)
                 border.width: 1
 
                 Canvas {

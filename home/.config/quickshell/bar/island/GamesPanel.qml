@@ -8,6 +8,7 @@
 // ╰──────────────────────────────────────────────────────────────────────────╯
 
 import QtQuick
+import Quickshell
 import QtQuick.Layouts
 
 import "../../theme"
@@ -110,10 +111,10 @@ FocusScope {
                         Rectangle {
                             anchors.fill: parent
                             radius: Theme.radiusMedium
-                            color: card.hovered ? Theme.islandSurfaceHover : Theme.islandSurface
+                            color: card.hovered ? Theme.surfaceHoverIn(QsWindow.window) : Theme.surfaceIn(QsWindow.window)
                             // Ringed in the game's own tint, which its board
                             // also uses.
-                            border.color: card.centred ? card.tint : Theme.islandBorder
+                            border.color: card.centred ? card.tint : Theme.borderIn(QsWindow.window)
                             border.width: card.centred ? 2 : 1
 
                             Behavior on color { ColorAnimation { duration: Theme.durationFast } }
@@ -335,8 +336,8 @@ FocusScope {
                         width: ending.implicitWidth + 56
                         height: ending.implicitHeight + 36
                         radius: Theme.radiusLarge
-                        color: Theme.islandSurface
-                        border.color: round.beaten ? Theme.indicatorWarn : Theme.islandBorder
+                        color: Theme.surfaceIn(QsWindow.window)
+                        border.color: round.beaten ? Theme.indicatorWarn : Theme.borderIn(QsWindow.window)
                         border.width: 1
                         scale: round.over ? 1 : 0.92
 

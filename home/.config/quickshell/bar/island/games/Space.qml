@@ -9,6 +9,7 @@
 
 import QtQuick
 
+import Quickshell
 import "../../../theme"
 
 // Space Blaster: a ship at the bottom and a formation of twenty invaders that
@@ -396,8 +397,8 @@ FocusScope {
         width: root.boardWidth
         height: root.boardHeight
         radius: Theme.radiusMedium
-        color: Theme.islandSurface
-        border.color: Theme.islandBorder
+        color: Theme.surfaceIn(QsWindow.window)
+        border.color: Theme.borderIn(QsWindow.window)
         border.width: 1
 
         Canvas {

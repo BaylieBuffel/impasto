@@ -9,14 +9,16 @@
 
 import QtQuick
 import QtQuick.Effects
+import Quickshell
 
 import "../../theme"
 import "../../services"
 import "../modules"
+import "../../components"
 
-// One side of the bar: the layout's ids drawn as capsules. The workspaces get
-// a capsule of their own; everything else shares one until a `split` starts
-// the next. A capsule holding a single item takes that item's shape
+// One side of the bar: the layout's ids drawn as capsules. The workspaces and
+// the tray get a capsule of their own; everything else shares one until a
+// `split` starts the next. A capsule holding a single item takes that item's shape
 // (`BarChip.alone`). Clicks open in the island (`Bar.qml`).
 Row {
     id: root
@@ -27,6 +29,8 @@ Row {
 
     // Inside the one capsule, where the band is already the ground.
     property bool chromeless: false
+    // Straight on the wallpaper, with no ground of any kind under it.
+    property bool overWallpaper: false
 
     // The bar's screen, for windows the tray opens (menus).
     property var hostScreen: null
@@ -41,12 +45,9 @@ Row {
         for (const item of root.entries) {
             if (item.id === "split") {
                 flush()
-            } else if (item.id === "workspaces") {
+            } else if (item.id === "workspaces" || item.id === "tray") {
                 flush()
-                out.push({ kind: "workspaces", items: [] })
-            } else if (item.id === "tray") {
-                flush()
-                out.push({ kind: "tray", items: [] })
+                out.push({ kind: item.id, items: [] })
             } else {
                 chips.push(item)
             }
@@ -58,7 +59,9 @@ Row {
     spacing: root.chromeless ? 14 : Theme.capsuleSpacing
 
     Repeater {
-        model: root.groups
+        model: ScriptModel {
+            values: root.groups
+        }
 
         Group {
             required property var modelData
@@ -67,6 +70,7 @@ Row {
             items: modelData.items
             chromeless: root.chromeless
             hostScreen: root.hostScreen
+            overWallpaper: root.overWallpaper
         }
     }
 
@@ -77,16 +81,19 @@ Row {
         property var items: []
         property bool chromeless: false
         property var hostScreen: null
+        property bool overWallpaper: false
 
         readonly property bool workspaces: group.kind === "workspaces"
         readonly property bool tray: group.kind === "tray"
+        // A capsule drawn by its own widget rather than of chips.
+        readonly property bool own: group.workspaces || group.tray
 
         // The items this machine has. A capsule with none (no battery, no
         // backlight on a desktop) is not drawn.
         readonly property var present:
             group.items.filter(item => ModuleService.shows(item.id, item.when))
 
-        readonly property bool alone: !group.workspaces && !group.tray && group.present.length === 1
+        readonly property bool alone: !group.own && group.present.length === 1
 
         // A ring alone is its own outline; a capsule border a pixel outside it
         // would smudge. Not when its figure is always shown, which makes it a
@@ -101,13 +108,8 @@ Row {
         }
 
         readonly property int pad: group.chromeless || group.alone ? 0 : 4
-
-        visible: group.workspaces
-            ? strip.item
-            : group.tray
-                ? (trayStrip.item ? trayStrip.item.present : false)
-                : group.present.length > 0
-        width: group.workspaces
+                                                 : group.present.length > 0)
+        width: group.own
             ? (strip.item ? strip.item.implicitWidth : 0)
             : group.tray
                 ? (trayStrip.item ? trayStrip.item.implicitWidth + 2 * group.pad : 0)
@@ -115,53 +117,102 @@ Row {
         height: Theme.capsuleHeight
 
         // Per-capsule shadow. In the one-capsule style the bar casts a single
-        // flattened one instead (`Bar.qml`).
+        // flattened one instead (`Bar.qml`). Under a ground that lets the
+        // screen through, the capsule's own shape is cut out of it, so it
+        // falls outside and does not show through.
         Item {
-            id: shadow
+            id: cast
 
-            readonly property int reach: Theme.shadowBarRange + 4
-            readonly property int spread: Theme.shadowBarSpread
-
-            visible: SettingsService.windowShadow && !group.chromeless
+            visible: SettingsService.barShadow && !group.chromeless
             x: -shadow.reach
             y: -shadow.reach
             width: group.width + 2 * shadow.reach
             height: group.height + 2 * shadow.reach
-            opacity: Theme.shadowOpacity
 
-            layer.enabled: shadow.visible
+            layer.enabled: cast.visible && !Theme.solid
             layer.effect: MultiEffect {
-                blurEnabled: true
-                blur: 1
-                blurMax: Theme.shadowBarRange - Theme.shadowBarSpread
+                maskEnabled: true
+                maskInverted: true
+                maskSource: cutout
+                maskThresholdMin: 0.5
+                maskSpreadAtMin: 1
             }
 
-            Rectangle {
-                x: shadow.reach - shadow.spread
-                y: shadow.reach - shadow.spread
-                width: group.width + 2 * shadow.spread
-                height: group.height + 2 * shadow.spread
-                radius: group.height / 2 + shadow.spread
-                color: Theme.shadowColor
+            Item {
+                id: shadow
+
+                readonly property int reach: Theme.shadowBarRange + 4
+                readonly property int spread: Theme.shadowBarSpread
+
+                anchors.fill: parent
+                opacity: Theme.shadowOpacity
+
+                layer.enabled: cast.visible
+                layer.effect: MultiEffect {
+                    blurEnabled: true
+                    blur: 1
+                    blurMax: Theme.shadowBarRange - Theme.shadowBarSpread
+                }
+
+                Rectangle {
+                    x: shadow.reach - shadow.spread
+                    y: shadow.reach - shadow.spread
+                    width: group.width + 2 * shadow.spread
+                    height: group.height + 2 * shadow.spread
+                    radius: group.height / 2 + shadow.spread
+                    color: Theme.shadowColor
+                }
+            }
+
+            Item {
+                id: cutout
+
+                anchors.fill: parent
+                visible: false
+                layer.enabled: !Theme.solid
+
+                Rectangle {
+                    x: shadow.reach
+                    y: shadow.reach
+                    width: group.width
+                    height: group.height
+                    radius: group.height / 2
+                }
             }
         }
 
         Loader {
             id: strip
 
-            active: group.workspaces
-            sourceComponent: WorkspacesWidget {
+            active: group.own
+            sourceComponent: group.tray ? trayCapsule : workspaceStrip
+        }
+
+        Component {
+            id: workspaceStrip
+            WorkspacesWidget {
                 chromeless: group.chromeless
+                overWallpaper: group.overWallpaper
             }
+        }
+
+        Component {
+            id: trayCapsule
+            TrayWidget { chromeless: group.chromeless }
         }
 
         Rectangle {
             anchors.fill: parent
-            visible: !group.workspaces
+            visible: !group.own
             radius: height / 2
-            color: group.chromeless ? "transparent" : Theme.island
-            border.color: Theme.islandBorder
+            color: group.chromeless ? "transparent" : Theme.islandGround
+            border.color: Theme.islandRim
             border.width: group.chromeless || group.bare ? 0 : 1
+
+            GlassSheen {
+                shape: parent
+                visible: Theme.glass && !group.chromeless && !group.bare
+            }
 
             Row {
                 id: chips
@@ -170,7 +221,9 @@ Row {
                 height: Theme.capsuleHeight
 
                 Repeater {
-                    model: group.items
+                    model: ScriptModel {
+                        values: group.items
+                    }
 
                     BarChip {
                         required property var modelData

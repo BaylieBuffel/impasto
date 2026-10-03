@@ -28,6 +28,8 @@ ROOT=${ROOT%/}
 DRY=0
 NOCONFIRM=0
 WATCH=0
+RESTORE=0
+FILES_ARGS=()
 QUIET=0
 HELPER=
 SKIP_PACKAGES=0
@@ -36,6 +38,8 @@ SKIP_PLUGINS=0
 SKIP_EXTRAS=0
 SUDO=
 SOFT=
+# Whether the desk was up when this run began: an install can take it down.
+SHELL_WAS_UP=0
 
 
 # ── OUTPUT ──────────────────────────────────────────────────────────────────
@@ -173,6 +177,9 @@ Usage: ./setup <command> [options]
   face        unlock the lock screen with your face, where there is an
               infrared camera: installs howdy-next and enrols you
 
+  files       the installed files you have edited or deleted, and each one
+              put back: files [list | restore | reset | keep] [path…], paths
+              as list prints them, under $HOME
   check       the syntax checks CI runs
   help        this
 
@@ -188,10 +195,13 @@ Options:
   --noconfirm         answer every question with its default
   -n, --dry-run       say what would change, and change nothing
   -w, --watch         sync: copy again every time a file under home/ is saved
+  --restore           install, update, sync, system: put back the installed
+                      files that were deleted here
 
 What lands in $HOME and / is a copy. A file edited in place is kept, and the
-repository's version is written beside it as <name>.new; whatever was in the
-way the first time is moved to ~/.local/state/impasto/backups.
+repository's version is written beside it as <name>.new; a file deleted here
+stays deleted until --restore; whatever was in the way the first time is moved
+to ~/.local/state/impasto/backups.
 EOF
 }
 
@@ -222,7 +232,7 @@ say() {
         word=${line%%' '*}
         rest=${line#"$word"}
         case $word in
-            ok|new|updated|replaced|removed|seeded|enabled|loaded|cloned|built|restored|reloaded|version)
+            ok|new|updated|replaced|removed|seeded|enabled|loaded|cloned|built|restored|reloaded|started|reboot|version)
                 line="$ACCENT$word$OFF$rest" ;;
             kept|left|skipped*|missing*|nothing*|all|watching|would|not)
                 line="$MUTED$word$OFF$rest" ;;
@@ -259,6 +269,7 @@ ask() {
 #   - a different file in the way the first time is moved to the backups;
 #   - a file unchanged since it was installed is replaced;
 #   - a file edited in place is kept, and the new version written as .new;
+#   - a file deleted after it was installed stays deleted, until --restore;
 #   - a file removed from the repository is deleted only if unedited;
 #   - a file setup did not install is never touched (e.g. generated themes).
 #
@@ -281,6 +292,20 @@ files_in() {
 }
 
 declare -A BEFORE=() AFTER=() LOOKED=() GONE=()
+
+# One writer at a time: `files`, run from Settings, and a `sync --watch` both
+# read the manifest, change it and write it back.
+MANIFEST_LOCK=
+manifest_lock() {
+    if (( DRY )); then return 0; fi
+    mkdir -p "$STATE"
+    exec {MANIFEST_LOCK}>"$STATE/manifest.lock"
+    flock "$MANIFEST_LOCK"
+}
+manifest_unlock() {
+    if [[ -n $MANIFEST_LOCK ]]; then exec {MANIFEST_LOCK}>&-; fi
+    MANIFEST_LOCK=
+}
 
 read_manifest() {
     BEFORE=()
@@ -309,9 +334,11 @@ put() {
 # Moves whatever was in the way into the backups. Files under / are copied
 # instead, since the backup directory belongs to this user.
 keep_aside() {
-    local dst=$1 name=$2
+    local dst=$1 name=$2 n=1
     if (( DRY )); then return 0; fi
     mkdir -p "$(dirname "$BACKUPS/$name")"
+    # Two runs in one second share the directory: never over a kept file.
+    while [[ -e $BACKUPS/$name ]]; do name=${2}.$n; n=$(( n + 1 )); done
     if [[ -n $SUDO ]]; then $SUDO cat "$dst" > "$BACKUPS/$name"; else mv "$dst" "$BACKUPS/$name"; fi
 }
 
@@ -366,7 +393,8 @@ tidy() {
 # $1 tree, $2 destination, $3 manifest, $4 display prefix.
 deploy() {
     local tree=$1 target=$2 manifest=$3 shown=$4
-    local rel src dst want have was said=0
+    local rel src dst want have was said=0 declined=0
+    manifest_lock
     read_manifest "$manifest"
     AFTER=()
     while IFS= read -r rel; do
@@ -381,6 +409,10 @@ deploy() {
             keep_aside "$dst" "$tree/$rel"; put "$src" "$dst"
             say "replaced $shown$rel — the link that was there is in the backups"; said=1
         elif [[ ! -e $dst ]]; then
+            if [[ -n ${BEFORE[$rel]:-} ]] && (( ! RESTORE )); then
+                declined=$(( declined + 1 ))    # installed once, deleted since
+                continue
+            fi
             put "$src" "$dst"; say "new      $shown$rel"; said=1
         else
             have=$(digest "$dst")
@@ -412,7 +444,13 @@ deploy() {
         fi
     done
 
+    if (( declined )); then
+        local verb=sync
+        if [[ $tree == system ]]; then verb=system; fi
+        say "skipped  $declined deleted here — ./setup $verb --restore puts them back"; said=1
+    fi
     write_manifest "$manifest"
+    manifest_unlock
     if (( ! said && ! QUIET )); then say 'nothing to do'; fi
 }
 
@@ -468,6 +506,44 @@ reload_shell() {
     done
 }
 
+# The installed shell, running or not. A probe runs the repository's own copy
+# and answers a different path, so it is not the desk.
+shell_up() {
+    command -v qs >/dev/null || return 1
+    qs list 2>/dev/null | grep -qF "Config path: $HOME/.config/quickshell/shell.qml"
+}
+
+note_shell() {
+    if (( ! SHELL_WAS_UP )) && shell_up; then SHELL_WAS_UP=1; fi
+}
+
+# An install upgrades packages first, which replaces the libraries under a
+# running shell, and the shell dies on the reload the copy asks for. Nothing
+# else starts it again before the next session. Only a desk this run took
+# down is put back, and it is started through Hyprland the way autostart
+# does, so it takes the session's environment rather than this terminal's.
+restore_shell() {
+    if (( DRY )) || (( ! SHELL_WAS_UP )) || shell_up; then return 0; fi
+    [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] && command -v hyprctl >/dev/null || return 0
+    # The dispatcher is read as Lua, the language the configuration is in.
+    act hyprctl dispatch 'hl.dsp.exec_cmd("qs -d")' >/dev/null
+    say 'started  the shell'
+}
+
+# What starting anything again does not fix: a kernel whose modules are no
+# longer on disk, and a session running on libraries that have been replaced.
+reboot_notice() {
+    local hypr
+    if [[ ! -d /usr/lib/modules/$(uname -r) ]]; then
+        say 'reboot when you can: the running kernel is no longer on disk'
+        return 0
+    fi
+    hypr=$(pgrep -x Hyprland | head -1) || return 0
+    if [[ -n $hypr ]] && grep -qE '\.so[^ ]* \(deleted\)' "/proc/$hypr/maps" 2>/dev/null; then
+        say 'reboot when you can: this session runs on libraries that have been replaced'
+    fi
+}
+
 
 # ── VERBS ───────────────────────────────────────────────────────────────────
 
@@ -477,19 +553,124 @@ version() {
     git -C "$REPO" describe --tags --always --dirty 2>/dev/null || echo unknown
 }
 
+# The tree of the checkout as a sync copies it, edits included: what a later
+# commit of those same edits is recognised by, so it is not offered again.
+synced_tree() {
+    local index
+    index=$(mktemp) || return 0
+    cp "$(git -C "$REPO" rev-parse --path-format=absolute --git-path index)" "$index" 2>/dev/null
+    GIT_INDEX_FILE=$index git -C "$REPO" add -A 2>/dev/null \
+        && GIT_INDEX_FILE=$index git -C "$REPO" write-tree 2>/dev/null
+    rm -f "$index"
+}
+
+# ── YOUR CHANGES ────────────────────────────────────────────────────────────
+#
+# What Settings → System shows and acts on, for the files under $HOME: the
+# installed files deleted since, and the ones edited since, each with whether
+# a newer version waits beside it as .new.
+#
+#   list      JSON: { "deleted": [path…], "edited": [{ "path", "waiting" }…] }
+#   restore   puts a deleted file back
+#   reset     the repository's version over yours, yours kept in the backups
+#   keep      yours stays, and the version beside it is taken as seen
+
+json_string() {
+    local text=${1//\\/\\\\}
+    text=${text//\"/\\\"}
+    printf '"%s"' "$text"
+}
+
+verb_files() {
+    local action=${FILES_ARGS[0]:-list} manifest=$STATE/home.manifest rel
+    local -a paths=("${FILES_ARGS[@]:1}")
+    case $action in
+        list)
+            read_manifest "$manifest"
+            files_list ;;
+        restore|reset|keep)
+            (( ${#paths[@]} )) || fail "files $action takes the paths list prints"
+            manifest_lock
+            read_manifest "$manifest"
+            AFTER=()
+            for rel in "${!BEFORE[@]}"; do AFTER[$rel]=${BEFORE[$rel]}; done
+            for rel in "${paths[@]}"; do files_one "$action" "$rel"; done
+            write_manifest "$manifest"
+            manifest_unlock ;;
+        *)       fail "files takes list, restore, reset or keep" ;;
+    esac
+}
+
+files_list() {
+    local -A have=()
+    local rel sum path line first=1
+    local -a present=()
+    for rel in "${!BEFORE[@]}"; do
+        if [[ -f $REPO/home/$rel && -f $HOME/$rel ]]; then present+=("$HOME/$rel"); fi
+    done
+    if (( ${#present[@]} )); then
+        while IFS= read -r line; do
+            sum=${line%% *}; path=${line#*  }
+            have[${path#"$HOME/"}]=$sum
+        done < <(printf '%s\0' "${present[@]}" | xargs -0 sha256sum)
+    fi
+    printf '{"deleted": ['
+    while IFS= read -r rel; do
+        [[ -n $rel && -f $REPO/home/$rel && ! -e $HOME/$rel ]] || continue
+        (( first )) || printf ', '; first=0
+        json_string "$rel"
+    done < <(printf '%s\n' "${!BEFORE[@]}" | sort)
+    printf '], "edited": ['
+    first=1
+    while IFS= read -r rel; do
+        [[ -n $rel ]] || continue
+        [[ ${have[$rel]} != "${BEFORE[$rel]}" ]] || continue
+        [[ ${have[$rel]} != "$(digest "$REPO/home/$rel")" ]] || continue
+        (( first )) || printf ', '; first=0
+        printf '{"path": %s, "waiting": %s}' "$(json_string "$rel")" \
+            "$([[ -f $HOME/$rel.new ]] && echo true || echo false)"
+    done < <(printf '%s\n' "${!have[@]}" | sort)
+    printf ']}\n'
+}
+
+files_one() {
+    local action=$1 rel=$2 src=$REPO/home/$2 dst=$HOME/$2
+    [[ -n $rel && -n ${BEFORE[$rel]:-} && -f $src ]] || { say "not      ~/$rel — not a file setup installed"; return 0; }
+    case $action in
+        restore)
+            [[ ! -e $dst ]] || { say "left     ~/$rel — it is there"; return 0; }
+            put "$src" "$dst"; say "restored ~/$rel" ;;
+        reset)
+            if [[ -e $dst ]] && [[ $(digest "$dst") != "$(digest "$src")" ]]; then
+                keep_aside "$dst" "home/$rel"
+                put "$src" "$dst"
+                say "restored ~/$rel — yours is in $BACKUPS"
+            else
+                put "$src" "$dst"
+                say "restored ~/$rel"
+            fi
+            act rm -f "$dst.new" ;;
+        keep)
+            act rm -f "$dst.new"
+            say "kept     ~/$rel" ;;
+    esac
+    AFTER[$rel]=$(digest "$src")
+}
+
 verb_sync() {
     section home
     SUDO=
     deploy home "$HOME" "$STATE/home.manifest" '~/'
     reload_shell
     seed
-    # What Settings → System shows: the version, the branch, and the checkout
-    # this copy came from — which is what its Update pulls and runs again.
+    # What Settings → System shows: the version, the branch, the checkout
+    # this copy came from — which is what its Update pulls and runs again —
+    # and the tree that was copied.
     if (( ! DRY )); then
         mkdir -p "$STATE"
-        printf '%s\n%s\n%s\n' "$(version)" \
+        printf '%s\n%s\n%s\n%s\n' "$(version)" \
             "$(git -C "$REPO" rev-parse --abbrev-ref HEAD 2>/dev/null)" "$REPO" \
-            > "$STATE/version"
+            "$(synced_tree)" > "$STATE/version"
     fi
 }
 
@@ -651,7 +832,6 @@ PLUGINS_PENDING=$STATE/plugins-pending
 # an empty line, which it takes as yes.
 plugin() {
     if ! hyprpm list 2>/dev/null | grep -q "$1"; then
-        act hyprpm update
         act hyprpm add "$2" </dev/null
     fi
     act hyprpm enable "$1"
@@ -699,15 +879,26 @@ verb_plugins() {
     fi
     say 'building shake to find and glass: your password, once'
     if (( ! DRY )); then hold_sudo; fi
+    # The headers first, and a rebuild of what is there when Hyprland has
+    # changed under it, even by a package rebuild of the same version.
+    act hyprpm update
     plugin dynamic-cursors https://github.com/virtcode/hypr-dynamic-cursors
     plugin hyprglass https://github.com/hyprnux/hyprglass
     act hyprpm reload
+    # hyprpm keys its headers on Hyprland's commit alone, so a rebuild of the
+    # same version against new libraries keeps stale ones and every plugin is
+    # refused, while `reload` still reports success. Only the list says so.
+    if (( ! DRY )) && hyprctl plugin list 2>/dev/null | grep -q '^no plugins loaded'; then
+        act hyprpm update -f
+        act hyprpm reload
+    fi
     release_sudo
     act rm -f "$PLUGINS_PENDING"
 }
 
 verb_install() {
     SECONDS=0
+    note_shell
     if (( ! SKIP_PACKAGES )); then verb_packages; fi
     folders
     omz
@@ -716,7 +907,11 @@ verb_install() {
     if (( ! SKIP_PLUGINS )); then verb_plugins; fi
     if (( ! SKIP_EXTRAS )); then extras; fi
     section done "$(elapsed)"
-    say 'log out and in again: the desk starts with the next Hyprland session'
+    restore_shell
+    if ! shell_up; then
+        say 'log out and in again: the desk starts with the next Hyprland session'
+    fi
+    reboot_notice
 }
 
 verb_update() {
@@ -1069,7 +1264,7 @@ verb_face() {
         || refuse 'howdy could not be configured' || return
     say "camera   $camera"
     if (( ! DRY )) && sudo howdy list >/dev/null 2>&1; then
-        say 'kept     the face already enrolled · sudo howdy add for another'
+        say 'kept     the face already enrolled · Settings → Session adds another'
     elif (( NOCONFIRM )) || [[ ! -t 0 ]]; then
         refuse 'enrolling needs you in front of the camera' || return
     elif ask 'enrol your face now? look straight at the camera'; then
@@ -1367,9 +1562,11 @@ main() {
             --noconfirm)     NOCONFIRM=1 ;;
             -n|--dry-run)    DRY=1 ;;
             -w|--watch)      WATCH=1 ;;
+            --restore)       RESTORE=1 ;;
             -h|--help)       usage; exit 0 ;;
             -*)              fail "unknown option: $1 (./setup help)" ;;
-            *)               [[ -z $verb ]] || fail "one command at a time: $verb, or $1"; verb=$1 ;;
+            *)               if [[ $verb == files ]]; then FILES_ARGS+=("$1")
+                             else [[ -z $verb ]] || fail "one command at a time: $verb, or $1"; verb=$1; fi ;;
         esac
         shift
     done
@@ -1398,6 +1595,7 @@ main() {
         thunar)    verb_thunar ;;
         vesktop)   verb_vesktop ;;
         face)      verb_face ;;
+        files)     verb_files ;;
         check)     verb_check ;;
         help|-h|--help) usage ;;
         *)         fail "unknown command: $verb (./setup help)" ;;

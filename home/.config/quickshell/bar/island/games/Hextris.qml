@@ -9,6 +9,7 @@
 
 import QtQuick
 
+import Quickshell
 import "../../../theme"
 
 // Hextris: a central hexagon with six lanes running in to its sides. Slabs fall
@@ -241,8 +242,8 @@ FocusScope {
         width: root.size
         height: root.size
         radius: Theme.radiusMedium
-        color: Theme.islandSurface
-        border.color: Theme.islandBorder
+        color: Theme.surfaceIn(QsWindow.window)
+        border.color: Theme.borderIn(QsWindow.window)
         border.width: 1
 
         // Pointer controls: outer thirds rotate, the middle drops.
@@ -335,7 +336,7 @@ FocusScope {
 
                 const core = ctx.createLinearGradient(0, height / 2 - root.core,
                                                       0, height / 2 + root.core)
-                core.addColorStop(0, tone(Theme.islandSurfaceHover, 1))
+                core.addColorStop(0, tone(Theme.surfaceHoverIn(QsWindow.window), 1))
                 core.addColorStop(1, tone(Theme.island, 1))
                 ctx.lineWidth = 2
                 ctx.fillStyle = core

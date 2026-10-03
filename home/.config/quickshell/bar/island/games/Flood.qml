@@ -9,6 +9,7 @@
 
 import QtQuick
 
+import Quickshell
 import "../../../theme"
 
 // Flood-It. The top-left region takes each chosen colour and absorbs the
@@ -138,8 +139,8 @@ FocusScope {
         width: root.cell * root.columns + 2 * root.pad
         height: root.cell * (root.rows + 1) + 3 * root.pad
         radius: Theme.radiusMedium
-        color: Theme.islandSurface
-        border.color: Theme.islandBorder
+        color: Theme.surfaceIn(QsWindow.window)
+        border.color: Theme.borderIn(QsWindow.window)
         border.width: 1
 
         Item {

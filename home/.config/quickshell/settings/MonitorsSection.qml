@@ -1,7 +1,7 @@
 // ╭──────────────────────────────────────────────────────────────────────────╮
 // │                                                                          │
 // │   M O N I T O R S   S E C T I O N                                        │
-// │   displays · arrangement, lid and night light                            │
+// │   displays · arrangement, the screen and the lid                         │
 // │                                                                          │
 // │   github.com/andreumassanet/impasto                                      │
 // │                                                                          │
@@ -521,43 +521,6 @@ SettingsSection {
                     color: Theme.textMuted
                 }
             }
-        }
-    }
-
-
-    // ── NIGHT LIGHT ─────────────────────────────────────────────────────────
-    //
-    // A gamma ramp through hyprsunset. The switch mirrors the control centre
-    // tile (both read `SunsetService`); the temperature is only set here.
-
-    SettingGroup {
-        visible: root.tab === "night"
-        title: Tr.t("Night light")
-        note: Tr.t("Warmer colours for the evening.")
-        hint: Tr.t("It adjusts the gamma ramp, so screenshots keep their original colours. There is no schedule: it stays on until you turn it off.")
-
-        SettingRow {
-            label: Tr.t("Warm the screen")
-            locked: !SunsetService.available
-            reason: Tr.t("Needs hyprsunset, which is not installed")
-
-            ToggleSwitch {
-                checked: SunsetService.on
-                onToggled: SunsetService.toggle()
-            }
-        }
-
-        SettingSlider {
-            label: Tr.t("Colour temperature")
-            value: SettingsService.nightTemperature
-            from: SunsetService.warmest
-            to: SunsetService.coolest
-            stepSize: 100
-            unit: " K"
-            locked: !SunsetService.available
-            reason: Tr.t("Needs hyprsunset, which is not installed")
-            onMoved: value => SettingsService.set(
-                "nightTemperature", Math.round(value / 100) * 100)
         }
     }
 }

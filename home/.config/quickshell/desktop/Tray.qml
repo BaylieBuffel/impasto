@@ -9,6 +9,7 @@
 
 import QtQuick
 
+import Quickshell
 import "../theme"
 import "../services"
 import "../components"
@@ -116,7 +117,7 @@ EditTray {
                 anchors.fill: parent
                 radius: Theme.desktopRadius
                 color: Theme.island
-                border.color: tile.pulled ? Theme.accent : Theme.islandBorder
+                border.color: tile.pulled ? Theme.accent : Theme.borderIn(QsWindow.window)
                 border.width: (tile.pulled ? 2 : 1) / tile.factor
             }
 
@@ -194,7 +195,7 @@ EditTray {
         // bars along it if it has none yet; anywhere else, a square.
         const edged = root.pulling === "notes" || root.pulling === "spectrum"
         const edge = edged
-            ? DeckService.edgeAt(pointer.x, pointer.y, root.board.width, root.board.height) : ""
+            ? DesktopService.edgeAt(pointer.x, pointer.y, root.board.width, root.board.height) : ""
         DeckService.receivingScreen = name
         DeckService.receiving = root.pulling !== "spectrum" || DesktopService.spectrumTakes(name, edge)
             ? edge : ""

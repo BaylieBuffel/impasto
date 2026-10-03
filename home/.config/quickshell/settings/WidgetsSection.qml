@@ -187,12 +187,24 @@ SettingsSection {
                     }
                 }
             }
+
+            SettingRow {
+                label: Tr.t("Hide the widgets")
+                reading: SettingsService.desktopHidden
+                    ? Tr.t("Off the wallpaper until you show them again")
+                    : Tr.t("On the wallpaper")
+
+                ToggleSwitch {
+                    checked: SettingsService.desktopHidden
+                    onToggled: checked => SettingsService.set("desktopHidden", checked)
+                }
+            }
         }
 
         SettingGroup {
             title: Tr.t("Look")
             note: Tr.t("Every widget follows these unless it was given a look of its own.")
-            hint: Tr.t("While arranging, click a widget to override these for it alone. Modern shows a figure with a caption and Analogue draws an object such as a dial or a gauge; the style and background set what sits behind it.")
+            hint: Tr.t("While arranging, click a widget to override these for it alone. Modern shows a figure with a caption, Analogue draws an object such as a dial or a gauge, and Sticker cuts it out as coloured stickers on the wallpaper; the style and background set what sits behind the first two.")
 
             SettingTiles {
                 label: Tr.t("Face")
@@ -219,27 +231,35 @@ SettingsSection {
                 }
             }
 
+            // The widgets' own ground, or the bar's.
             SettingTiles {
-                label: Tr.t("Style")
+                label: Tr.t("Ground")
+                reading: SettingsService.desktopGround === "" ? Tr.t("As the bar")
+                    : Theme.deskGlass ? Tr.t("The terminal's glass, over a blur") : Tr.t("Solid black")
+                locked: !DesktopService.capsuled
+                reason: Tr.t("No widget on the desk has a capsule")
 
                 Repeater {
-                    model: DesktopService.styles
+                    model: [
+                        { id: "", label: "As the bar" },
+                        { id: "classic", label: "Classic" },
+                        { id: "glass", label: "Glass" }
+                    ]
 
                     PreviewTile {
-                        id: styleTile
+                        id: deskTile
 
                         required property var modelData
 
                         stageHeight: 56
-                        caption: Tr.t(styleTile.modelData.label)
-                        selected: SettingsService.desktopStyle === styleTile.modelData.id
-                        onPicked: SettingsService.set("desktopStyle", styleTile.modelData.id)
+                        caption: Tr.t(deskTile.modelData.label)
+                        selected: SettingsService.desktopGround === deskTile.modelData.id
+                        onPicked: SettingsService.set("desktopGround", deskTile.modelData.id)
 
-                        StyleSwatch {
+                        GroundSwatch {
                             anchors.centerIn: parent
-                            factor: 1.6
-                            style: styleTile.modelData.id
-                            ink: DesktopService.inkFor({ style: styleTile.modelData.id })
+                            style: deskTile.modelData.id === "" ? SettingsService.surfaceStyle
+                                : deskTile.modelData.id
                         }
                     }
                 }
@@ -252,6 +272,10 @@ SettingsSection {
                 to: 100
                 stepSize: 5
                 unit: "%"
+                // A see-through ground sets it: the capsules are the island's glass.
+                locked: !DesktopService.capsuled || !Theme.deskSolid
+                reason: !DesktopService.capsuled ? Tr.t("No widget on the desk has a capsule")
+                    : Tr.t("Choose the Classic ground above to change it")
                 onMoved: value => SettingsService.set("desktopOpacity", Math.round(value))
             }
         }

@@ -9,6 +9,7 @@
 
 import QtQuick
 
+import Quickshell
 import "../../theme"
 import "../../services"
 import "../modules"
@@ -75,7 +76,7 @@ Item {
         width: parent.width - (root.alone ? 2 : 4)
         height: root.alone ? parent.height - 2 : Theme.capsuleHeight - 8
         radius: height / 2
-        color: Theme.islandSurfaceHover
+        color: Theme.surfaceHoverIn(QsWindow.window)
         opacity: mouse.containsMouse || root.open ? 1 : 0
 
         Behavior on opacity { NumberAnimation { duration: Theme.durationFast } }

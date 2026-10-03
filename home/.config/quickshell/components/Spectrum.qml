@@ -32,7 +32,7 @@ Item {
     property real barSpacing: 2
 
     // Sized from its own bars, so layouts can place it exactly.
-    readonly property int barCount: CavaService.values.length
+    readonly property int barCount: CavaService.barCount
 
     implicitWidth: root.barCount > 0
         ? root.barCount * root.barWidth + (root.barCount - 1) * root.barSpacing
@@ -47,16 +47,20 @@ Item {
         // array every frame, and a JS array model would destroy and recreate
         // every delegate on each replacement. With an integer model the bars
         // are built once and only their height bindings re-evaluate.
+        // A fixed count, each bar reading its own value: a model of the values
+        // themselves would rebuild every bar on every cava frame.
         Repeater {
             model: root.barCount
 
             Rectangle {
                 required property int index
 
+                readonly property real value: CavaService.values[index] ?? 0
+
                 Layout.preferredWidth: root.barWidth
                 Layout.preferredHeight: root.active
                     ? Math.max(root.minimum,
-                        root.height * Math.pow(Math.max(0, CavaService.values[root.index] ?? 0), root.curve))
+                        root.height * Math.pow(Math.max(0, value), root.curve))
                     : root.minimum
                 Layout.alignment: Qt.AlignVCenter
                 radius: width / 2

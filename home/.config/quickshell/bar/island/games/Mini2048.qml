@@ -9,6 +9,7 @@
 
 import QtQuick
 
+import Quickshell
 import "../../../theme"
 
 // 2048 on a 4×4 board. Tiles slide as far as they can; equal neighbours merge
@@ -160,7 +161,7 @@ FocusScope {
         const y = Theme.yellow
         const r = Theme.red
         switch (value) {
-        case 0:    return Theme.islandSurfaceHover
+        case 0:    return Theme.surfaceHoverIn(QsWindow.window)
         case 2:    return Qt.rgba(t.r, t.g, t.b, 0.25)
         case 4:    return Qt.rgba(t.r, t.g, t.b, 0.4)
         case 8:    return Qt.rgba(t.r, t.g, t.b, 0.6)
@@ -190,8 +191,8 @@ FocusScope {
         width: root.side * root.cell + (root.side + 1) * root.gap
         height: width
         radius: Theme.radiusMedium
-        color: Theme.islandSurface
-        border.color: Theme.islandBorder
+        color: Theme.surfaceIn(QsWindow.window)
+        border.color: Theme.borderIn(QsWindow.window)
         border.width: 1
 
         Repeater {

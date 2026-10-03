@@ -33,6 +33,7 @@ WlSessionLock {
 
         LockSurface {
             anchors.fill: parent
+            output: surface.screen?.name ?? ""
 
             // The surface exists before it can hold the keyboard, so the field
             // claims it once the surface is up rather than on its own

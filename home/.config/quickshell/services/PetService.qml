@@ -71,7 +71,7 @@ Singleton {
     // ── FAMILY ──────────────────────────────────────────────────────────────
 
     // Records: `{ species, name, level, xp, fedAt, playedAt, hatchedAt,
-    // restedAt }`. Held here and only mirrored into the adapter (see
+    // restedAt, fedRest, playedRest }`. Held here and only mirrored into the adapter (see
     // STORAGE).
     property var family: []
     property int active: 0
@@ -144,7 +144,9 @@ Singleton {
             fedAt: 0,
             playedAt: 0,
             hatchedAt: 0,
-            restedAt: 0
+            restedAt: 0,
+            fedRest: 0,
+            playedRest: 0
         }
     }
 
@@ -222,8 +224,15 @@ Singleton {
         return stamp > 0 ? Math.max(0, root.clock.date.getTime() - stamp) : 0
     }
 
+    // Real time since the last meal and game: each pet's cooldowns run
+    // whether it is out or on the shelf.
     readonly property real fedAgo: root.agoOf(root.pet ? root.pet.fedAt : 0)
     readonly property real playedAgo: root.agoOf(root.pet ? root.pet.playedAt : 0)
+
+    // The same, less the time spent asleep on the shelf since, which is what
+    // the mood reads: a pet put away does not get hungry.
+    readonly property real fedAwake: Math.max(0, root.fedAgo - (root.pet?.fedRest ?? 0))
+    readonly property real playedAwake: Math.max(0, root.playedAgo - (root.pet?.playedRest ?? 0))
 
     readonly property bool canFeed:
         !!root.pet && (root.pet.fedAt <= 0 || root.fedAgo >= root.feedCooldown)
@@ -233,7 +242,7 @@ Singleton {
     function feed(): void {
         if (!root.canFeed)
             return
-        root.reward(25, { fedAt: Date.now() })
+        root.reward(25, { fedAt: Date.now(), fedRest: 0 })
     }
 
     // Time since the last game pays a capped bonus, so coming back later is
@@ -241,8 +250,8 @@ Singleton {
     function play(): void {
         if (!root.canPlay)
             return
-        const bonus = Math.min(18, Math.floor(root.playedAgo / 3600000) * 3)
-        root.reward(12 + bonus, { playedAt: Date.now() })
+        const bonus = Math.min(18, Math.floor(root.playedAwake / 3600000) * 3)
+        root.reward(12 + bonus, { playedAt: Date.now(), playedRest: 0 })
         root.played()
     }
 
@@ -264,8 +273,8 @@ Singleton {
 
     signal brought(int index)
 
-    // The pet going back records when it fell asleep; the one waking has that
-    // time added to its stamps, so time on the shelf does not count.
+    // The pet going back records when it fell asleep; the one waking counts
+    // that time as rest, so the shelf spares its mood but not its cooldowns.
     function bringOut(index: int): void {
         if (index < 0 || index >= root.family.length || index === root.activeIndex)
             return
@@ -277,9 +286,9 @@ Singleton {
         const waking = Object.assign({}, list[index])
         const slept = waking.restedAt > 0 ? Math.max(0, now - waking.restedAt) : 0
         if (waking.fedAt > 0)
-            waking.fedAt += slept
+            waking.fedRest = (waking.fedRest ?? 0) + slept
         if (waking.playedAt > 0)
-            waking.playedAt += slept
+            waking.playedRest = (waking.playedRest ?? 0) + slept
         waking.restedAt = 0
         list[index] = waking
         root.family = list
@@ -293,8 +302,8 @@ Singleton {
     // Derived, never stored. Checked in order: long neglect reads as asleep,
     // and hunger outranks loneliness.
     readonly property string mood: {
-        const fed = root.fedAgo
-        const played = root.playedAgo
+        const fed = root.fedAwake
+        const played = root.playedAwake
         if (fed > 16 * 3600000 && played > 16 * 3600000)
             return "asleep"
         if (fed > 6 * 3600000)
@@ -415,7 +424,9 @@ Singleton {
                 fedAt: previous.fedAt ?? 0,
                 playedAt: previous.playedAt ?? 0,
                 hatchedAt: previous.hatchedAt ?? 0,
-                restedAt: 0
+                restedAt: 0,
+                fedRest: 0,
+                playedRest: 0
             }]
         } else {
             root.family = [root.newborn([])]

@@ -9,7 +9,6 @@
 
 import QtQuick
 import QtQuick.Effects
-import Quickshell
 
 import "../theme"
 import "../services"
@@ -25,6 +24,9 @@ Item {
 
     signal submitted(string password)
 
+    // The output this surface covers, whose own picture it shows.
+    property string output: ""
+
     // Focus lands here and stays.
     function claim(): void {
         account.claim()
@@ -37,10 +39,6 @@ Item {
     Behavior on held {
         NumberAnimation { duration: Theme.durationMorph; easing.type: Easing.InOutCubic }
     }
-
-    // The shot is every screen at once, so only a lone screen can show it
-    // sharp; with more, the blur stays and only the type goes.
-    readonly property real clearing: Quickshell.screens.length === 1 ? root.held : 1
 
     // 0 at rest, 1 awake: what only an awake screen shows fades and rises
     // with it.
@@ -59,8 +57,8 @@ Item {
         }
     }
 
-    // The pointer moving is somebody there, and a reason to look for a face;
-    // a click wakes the screen as a key does. Qt sends a hover at the resting
+    // The pointer moving on an awake screen is a reason to look for a face
+    // again; a click wakes the screen as a key does. Qt sends a hover at the resting
     // position whenever the scene repaints, so only a pointer that has moved
     // counts.
     HoverHandler {
@@ -79,7 +77,6 @@ Item {
 
     TapHandler {
         onTapped: {
-            LockService.wake()
             LockService.rouse()
             account.claim()
         }
@@ -96,7 +93,7 @@ Item {
         id: shot
 
         anchors.fill: parent
-        source: LockService.shotSource
+        source: LockService.shotSource(root.output)
         visible: false
         fillMode: Image.PreserveAspectCrop
         asynchronous: false
@@ -108,13 +105,13 @@ Item {
         source: shot
         visible: shot.status === Image.Ready
         blurEnabled: true
-        blur: root.clearing
+        blur: root.held
         // Enough to make text unreadable while the desktop stays recognisable.
         blurMax: SettingsService.lockBlur
         // Barely darkened: a dark desktop dimmed further looks broken. The text
         // has its own shadow and every capsule is opaque, so the background
         // only needs to be blurred.
-        brightness: -0.05 * root.clearing
+        brightness: -0.05 * root.held
         saturation: 0
     }
 
@@ -122,7 +119,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: Theme.scrim
-        opacity: 0.18 * root.clearing
+        opacity: 0.18 * root.held
     }
 
     // ── STATUS ──────────────────────────────────────────────────────────────

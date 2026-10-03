@@ -9,6 +9,7 @@
 
 import QtQuick
 
+import Quickshell
 import "../theme"
 
 // The card shown while arranging, shared by the desktop and the control
@@ -175,7 +176,7 @@ Item {
             Math.max(2 * root.pad, root.height - 2 * Theme.desktopGutter))
         radius: Theme.radiusLarge
         color: Theme.island
-        border.color: root.receiving ? Theme.accent : Theme.islandBorder
+        border.color: root.receiving ? Theme.accent : Theme.borderIn(QsWindow.window)
         border.width: root.receiving ? 2 : 1
 
         Behavior on border.color { ColorAnimation { duration: Theme.durationFast } }
@@ -366,7 +367,7 @@ Item {
             height: 24
             radius: 12
             color: Theme.island
-            border.color: carry.active ? Theme.accent : Theme.islandBorder
+            border.color: carry.active ? Theme.accent : Theme.borderIn(QsWindow.window)
             border.width: carry.active ? 2 : 1
 
             Text {
@@ -420,7 +421,7 @@ Item {
             height: 24
             radius: 12
             color: Theme.island
-            border.color: stretch.active ? Theme.accent : Theme.islandBorder
+            border.color: stretch.active ? Theme.accent : Theme.borderIn(QsWindow.window)
             border.width: stretch.active ? 2 : 1
 
             // A corner bracket, as on a widget.

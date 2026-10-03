@@ -26,7 +26,6 @@
     "chipShape": "ring",
     "chipFigure": "hover",
     "desktopTheme": "modern",
-    "desktopStyle": "capsule",
     "desktopOpacity": 75,
     "desktopWidgets": [
       {
@@ -248,8 +247,11 @@
       "Shell · Open the notes": "SUPER + S",
       "Shell · Open the task board": "SUPER + K",
       "Shell · Show every key": "SUPER + H",
+      "Shell · Hide or show the bar": "SUPER + CTRL + B",
+      "Shell · Hide or show the desktop widgets": "SUPER + CTRL + W",
       "Shell · Open the packages": "SUPER + I",
       "Shell · Open the clipboard history": "SUPER + V",
+      "Shell · Pick an emoji": "SUPER + period",
       "Shell · Pick a colour off the screen": "SUPER + SHIFT + C",
       "Shell · Open the capture surface": "SUPER + SHIFT + S",
       "Shell · Open the capture surface, from Print": "Print",

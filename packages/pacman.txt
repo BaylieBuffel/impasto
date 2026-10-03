@@ -22,6 +22,7 @@ imagemagick                  # the palette board
 python                       # every backend in scripts/
 git                          # setup's own clones, ./setup cursors, lazy.nvim
 grim                         # the capture's photograph, and the lock screen's
+dbus                         # dbus-monitor, which hears logind about to sleep
 wl-clipboard                 # copying, and the clipboard's history
 gtk3                         # gtk-launch, which the launcher opens applications with
 libnotify                    # notify-send, which the timer rings with
@@ -40,6 +41,9 @@ ttf-jetbrains-mono-nerd      # the terminal's type, and every glyph on the bar
 adwaita-fonts                # the GTK windows' type
 noto-fonts                   # the scripts the three above do not cover
 noto-fonts-emoji             # emoji, in colour
+unicode-emoji                # the emoji and their groups, for the launcher
+unicode-cldr-annotations     # their names and keywords, in every language
+iso-codes                    # country names, for the flags
 noto-fonts-cjk               # Chinese, Japanese and Korean, and their punctuation
 
 
@@ -87,6 +91,7 @@ cava                         # the same, and the bar's visualiser
 yazi                         # the file manager in the terminal
 imv                          # what yazi and the photo widget hand a picture to
 mpv                          # what yazi hands a video or a song to
+ffmpeg                       # an animated wallpaper's still, for its palette
 asciiquarium
 
 
@@ -135,11 +140,12 @@ cpio
 # ── LOGIN SCREEN ────────────────────────────────────────────────────────────
 
 sddm                         # ./setup system
+accountsservice              # the account's full name, which both screens show
 
 
 # ── FACE UNLOCK ─────────────────────────────────────────────────────────────
 
-v4l-utils                    # v4l2-ctl, which ./setup face finds the infrared camera with
+v4l-utils                    # v4l2-ctl, which ./setup face and Settings find the infrared camera with
 
 
 # ── DEVELOPMENT ─────────────────────────────────────────────────────────────

@@ -7,6 +7,10 @@
 // │                                                                          │
 // ╰──────────────────────────────────────────────────────────────────────────╯
 
+// Greyscale text: subpixel edges assume an opaque ground and fringe on a
+// transparent surface.
+//@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray
+
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
@@ -54,6 +58,8 @@ ShellRoot {
         void SunsetService.available
         // Arms the idle monitors.
         void IdleService.lockAfter
+        // Holds every sleep until the lock is up.
+        void SessionService.sleepPending
         // Seeds the example profiles on a first install.
         void ProfileService.arrived
     }
@@ -278,13 +284,14 @@ ShellRoot {
         onPressed: MonitorService.lid(true)
     }
 
-    // Opening the lid is somebody sitting down, and the lock looks for them.
+    // Opening the lid is somebody sitting down: it wakes the lock, which
+    // looks for them.
     GlobalShortcut {
         name: "lidOpened"
         description: "The laptop lid was opened"
         onPressed: {
             MonitorService.lid(false)
-            LockService.wake()
+            LockService.rouse()
         }
     }
 
@@ -391,28 +398,48 @@ ShellRoot {
     }
 
     GlobalShortcut {
+        name: "zen"
+        description: "Hide or show the bar"
+        onPressed: SettingsService.set("barHidden", !SettingsService.barHidden)
+    }
+
+    GlobalShortcut {
+        name: "widgets"
+        description: "Hide or show the desktop widgets"
+        onPressed: SettingsService.set("desktopHidden", !SettingsService.desktopHidden)
+    }
+
+    GlobalShortcut {
         name: "packages"
         description: "Open the packages"
         onPressed: root.island?.toggle("packages")
     }
 
-    // The clipboard is a launcher mode: pressed again on that mode it closes,
-    // pressed on another mode it switches. The query is set before opening
-    // because with `launcherFits` the panel's height depends on it, and the
-    // island is sized before the panel exists.
+    // The clipboard and the emoji are launcher modes: pressed again on that
+    // mode it closes, pressed on another mode it switches. The query is set
+    // before opening because with `launcherFits` the panel's height depends on
+    // it, and the island is sized before the panel exists.
+    function openLauncherOn(mode: string): void {
+        const sigil = SettingsService.launcherPrefix(mode)
+        const showing = root.island?.state.openPanel === "launcher"
+        if (showing && LauncherService.query.startsWith(sigil)) {
+            root.island?.close()
+            return
+        }
+        LauncherService.query = sigil
+        root.island?.open("launcher")
+    }
+
     GlobalShortcut {
         name: "clipboard"
         description: "Open the launcher on the clipboard"
-        onPressed: {
-            const sigil = SettingsService.launcherPrefix("clipboard")
-            const showing = root.island?.state.openPanel === "launcher"
-            if (showing && LauncherService.query.startsWith(sigil)) {
-                root.island?.close()
-                return
-            }
-            LauncherService.query = sigil
-            root.island?.open("launcher")
-        }
+        onPressed: root.openLauncherOn("clipboard")
+    }
+
+    GlobalShortcut {
+        name: "emoji"
+        description: "Open the launcher on the emoji"
+        onPressed: root.openLauncherOn("emoji")
     }
 
     // hyprpicker freezes a screenshot of the screen, so an open panel has to
@@ -526,6 +553,23 @@ ShellRoot {
     // shell starts on its own when a file changes can begin before the last
     // one is written, and then never sees it:
     //   qs ipc call shell reload
+    // The same two switches as the keys, for anything else to bind.
+    IpcHandler {
+        target: "bar"
+
+        function toggle(): void {
+            SettingsService.set("barHidden", !SettingsService.barHidden)
+        }
+    }
+
+    IpcHandler {
+        target: "widgets"
+
+        function toggle(): void {
+            SettingsService.set("desktopHidden", !SettingsService.desktopHidden)
+        }
+    }
+
     IpcHandler {
         target: "shell"
 

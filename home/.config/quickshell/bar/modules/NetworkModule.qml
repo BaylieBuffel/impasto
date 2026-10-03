@@ -37,88 +37,57 @@ Item {
     Component {
         id: detail
 
-        ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: 14
-            anchors.topMargin: 12
-            anchors.bottomMargin: 12
-            spacing: 12
+        ModuleCard {
+            title: NetworkService.connectionName
+            subtitle: root.stateLine
 
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 13
+            mark: RingIndicator {
+                anchors.fill: parent
+                thickness: 3
+                progress: 0
+                trackColor: Theme.indicatorDim
 
-                RingIndicator {
-                    Layout.preferredWidth: 44
-                    Layout.preferredHeight: 44
-                    thickness: 2.5
-                    progress: 0
-                    trackColor: Theme.indicatorDim
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: NetworkService.icon
-                        font.family: Theme.fontMono
-                        font.pixelSize: 18
-                        color: NetworkService.online ? Theme.indicator : Theme.textMuted
-                    }
-                }
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 2
-
-                    Text {
-                        Layout.fillWidth: true
-                        text: NetworkService.connectionName
-                        elide: Text.ElideRight
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSizeMedium
-                        font.weight: Font.DemiBold
-                        color: Theme.text
-                    }
-
-                    Text {
-                        Layout.fillWidth: true
-                        text: root.stateLine
-                        elide: Text.ElideRight
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSizeSmall
-                        color: Theme.textMuted
-                    }
+                Text {
+                    anchors.centerIn: parent
+                    text: NetworkService.icon
+                    font.family: Theme.fontMono
+                    font.pixelSize: 18
+                    color: NetworkService.online ? Theme.indicator : Theme.textMuted
                 }
             }
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 14
+                Layout.preferredHeight: Theme.cardRow
+                spacing: 10
 
-                Figure {
+                Text {
                     Layout.fillWidth: true
-                    Layout.preferredWidth: 1
-                    label: "WI-FI"
-                    value: NetworkService.wifiEnabled ? "On" : "Off"
-                    note: NetworkService.wifiConnected ? "connected" : ""
-                }
-
-                Figure {
-                    Layout.fillWidth: true
-                    Layout.preferredWidth: 1
-                    label: "LINK"
-                    value: {
-                        if (NetworkService.wiredConnected)
-                            return "Wired"
-                        return NetworkService.wifiConnected ? "Wireless" : "None"
-                    }
-                    note: NetworkService.online ? "internet reached" : ""
-                }
-
-                PillButton {
-                    Layout.alignment: Qt.AlignVCenter
                     text: "Wi-Fi"
-                    active: NetworkService.wifiEnabled
-                    implicitHeight: 28
-                    onClicked: NetworkService.toggleWifi()
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.textMuted
+                }
+
+                Text {
+                    text: NetworkService.wifiConnected ? "connected" : (NetworkService.wifiEnabled ? "on" : "off")
+                    font.family: Theme.fontMono
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.text
+                }
+
+                ToggleSwitch {
+                    checked: NetworkService.wifiEnabled
+                    onToggled: NetworkService.toggleWifi()
+                }
+            }
+
+            CardFact {
+                name: "Link"
+                value: {
+                    const link = NetworkService.wiredConnected ? "Wired"
+                        : NetworkService.wifiConnected ? "Wireless" : "None"
+                    return NetworkService.online ? `${link} · internet reached` : link
                 }
             }
         }

@@ -8,7 +8,7 @@
 // ╰──────────────────────────────────────────────────────────────────────────╯
 
 import QtQuick
-import QtQuick.Layouts
+import Quickshell
 
 import "../../theme"
 import "../../services"
@@ -61,116 +61,50 @@ Item {
         }
     }
 
-    // One row per screen that can be dimmed; with only one, the row is
-    // "Brightness" rather than the screen's name.
+    // A level per screen that can be dimmed, named by the screen.
     Component {
         id: detail
 
-        ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: 14
-            spacing: 14
+        ModuleCard {
+            title: "Brightness"
+            subtitle: BrightnessService.several
+                ? `${BrightnessService.dimmable.length} screens`
+                : "One screen"
+            figure: `${BrightnessService.percent}%`
 
             Component.onCompleted: BrightnessService.refresh()
 
-            Repeater {
-                model: BrightnessService.dimmable
+            // Same white ring as the chip; only the levels follow the palette.
+            mark: RingIndicator {
+                anchors.fill: parent
+                thickness: 3
+                progress: BrightnessService.percent / 100
+                trackColor: Theme.indicatorDim
+                fillColor: Theme.indicator
 
-                RowLayout {
-                    id: row
+                Text {
+                    anchors.centerIn: parent
+                    text: BrightnessService.icon
+                    font.family: Theme.fontMono
+                    font.pixelSize: 18
+                    color: Theme.indicator
+                }
+            }
+
+            Repeater {
+                model: ScriptModel {
+                    values: BrightnessService.dimmable
+                }
+
+                CardLevel {
+                    id: screen
 
                     required property var modelData
 
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    spacing: 14
-
-                    // Same white ring as the chip; only the slider follows the palette.
-                    RingIndicator {
-                        Layout.preferredWidth: 48
-                        Layout.preferredHeight: 48
-                        Layout.alignment: Qt.AlignVCenter
-                        thickness: 3
-                        progress: row.modelData.percent / 100
-                        trackColor: Theme.indicatorDim
-                        fillColor: Theme.indicator
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: row.modelData.icon
-                            font.family: Theme.fontMono
-                            font.pixelSize: 17
-                            color: Theme.indicator
-                        }
-                    }
-
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignVCenter
-                        spacing: 8
-
-                        RowLayout {
-                            Layout.fillWidth: true
-
-                            Text {
-                                Layout.fillWidth: true
-                                text: BrightnessService.dimmable.length > 1
-                                    ? row.modelData.title : "Brightness"
-                                elide: Text.ElideRight
-                                font.family: Theme.fontFamily
-                                font.pixelSize: Theme.fontSizeSmall
-                                font.weight: Font.DemiBold
-                                color: Theme.text
-                            }
-
-                            Text {
-                                text: `${row.modelData.percent}%`
-                                font.family: Theme.fontMono
-                                font.pixelSize: Theme.fontSizeSmall
-                                color: Theme.text
-                            }
-                        }
-
-                        // The whole strip is the hit area.
-                        Item {
-                            id: slider
-
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 16
-
-                            UsageBar {
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.verticalCenter: parent.verticalCenter
-                                implicitHeight: sliderMouse.containsMouse ? 6 : 4
-                                progress: row.modelData.percent / 100
-                                fillColor: Theme.accent
-
-                                Behavior on implicitHeight {
-                                    NumberAnimation {
-                                        duration: Theme.durationFast
-                                        easing.type: Theme.easing
-                                    }
-                                }
-                            }
-
-                            MouseArea {
-                                id: sliderMouse
-
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onPressed: event => row.modelData.setPercent(
-                                    Math.round(event.x / slider.width * 100))
-                                onPositionChanged: event => {
-                                    if (pressed)
-                                        row.modelData.setPercent(Math.max(0,
-                                            Math.min(100,
-                                                Math.round(event.x / slider.width * 100))))
-                                }
-                            }
-                        }
-                    }
+                    glyph: screen.modelData.icon
+                    name: screen.modelData.title
+                    value: screen.modelData.percent
+                    onMoved: value => screen.modelData.setPercent(value)
                 }
             }
         }
