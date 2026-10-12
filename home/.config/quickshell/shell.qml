@@ -23,6 +23,7 @@ import "./dock"
 import "./lock"
 import "./services"
 import "./settings"
+import "./theme"
 
 // Entry point: the windows, the services that must start at boot, and the
 // wiring between services that may not reference each other.
@@ -47,10 +48,14 @@ ShellRoot {
         void ShortcutService.catalogue
         // Reads the user's name and face ahead of the first lock.
         void AccountService.user
+        // Registers the polkit agent, so a request is answered from the start.
+        void PolkitService.asking
         // Probes for hyprpicker, so the first press is not the one that asks.
         void PickerService.available
         // Starts the clipboard watcher.
         void ClipboardService.count
+        // Reads the virtual machines, one of which may be running from before.
+        void VmService.loaded
         // Probes the monitor source, so the first take is not silent, and
         // picks up a take left running by a previous shell.
         void RecorderService.available
@@ -240,6 +245,21 @@ ShellRoot {
         }
     }
 
+    // A program asking for root opens the island on its request, and the
+    // island closes once it is answered.
+    Connections {
+        target: PolkitService
+
+        function onRequested(): void {
+            root.island?.open("auth")
+        }
+
+        function onSettled(): void {
+            if (root.island?.state.openPanel === "auth")
+                root.island?.close()
+        }
+    }
+
     // Optional clipboard wipe on lock. Joined here so neither service depends
     // on the other. Password-manager copies are never stored in the first
     // place; this covers everything else.
@@ -410,9 +430,31 @@ ShellRoot {
     }
 
     GlobalShortcut {
+        name: "game"
+        description: "Turn game mode on or off"
+        onPressed: {
+            const on = !SettingsService.gameMode
+            SettingsService.set("gameMode", on)
+            OsdService.requested("󰺵", Tr.t(on ? "Game mode on" : "Game mode off"), -1)
+        }
+    }
+
+    GlobalShortcut {
+        name: "layout"
+        description: "Cycle the layout"
+        onPressed: CompositorService.cycleLayout()
+    }
+
+    GlobalShortcut {
         name: "packages"
         description: "Open the packages"
         onPressed: root.island?.toggle("packages")
+    }
+
+    GlobalShortcut {
+        name: "machines"
+        description: "Open the virtual machines"
+        onPressed: root.island?.toggle("machines")
     }
 
     // The clipboard and the emoji are launcher modes: pressed again on that
@@ -534,48 +576,12 @@ ShellRoot {
 
     // ── IPC ─────────────────────────────────────────────────────────────────
     //
-    // Every palette push hangs off WallpaperService.applied, which only fires
-    // inside this process. External callers (Thunar's "Set as Wallpaper")
-    // come in here instead of running theme_manager.py directly:
+    // Everything the impasto command and `qs ipc call` can reach. Every
+    // palette push hangs off WallpaperService.applied, which only fires
+    // inside this process, so Thunar's "Set as Wallpaper" comes in here too:
     //   qs ipc call wallpaper set <path>
-    IpcHandler {
-        target: "wallpaper"
-
-        function set(path: string): string {
-            if (!path)
-                return "usage: qs ipc call wallpaper set <path>"
-            WallpaperService.apply(path)
-            return path
-        }
-    }
-
-    // `./setup sync` calls this once every file has landed. The reload the
-    // shell starts on its own when a file changes can begin before the last
-    // one is written, and then never sees it:
-    //   qs ipc call shell reload
-    // The same two switches as the keys, for anything else to bind.
-    IpcHandler {
-        target: "bar"
-
-        function toggle(): void {
-            SettingsService.set("barHidden", !SettingsService.barHidden)
-        }
-    }
-
-    IpcHandler {
-        target: "widgets"
-
-        function toggle(): void {
-            SettingsService.set("desktopHidden", !SettingsService.desktopHidden)
-        }
-    }
-
-    IpcHandler {
-        target: "shell"
-
-        function reload(): void {
-            Quickshell.reload(false)
-        }
+    Commands {
+        island: root.island
     }
 
 }

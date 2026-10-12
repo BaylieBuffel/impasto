@@ -156,7 +156,7 @@ SettingsSection {
         SettingGroup {
             title: Tr.t("Windows")
             note: Tr.t("How Hyprland draws every window, this one included.")
-            hint: Tr.t("The preview below is live and at full size. The border stays at zero because gaps and rounding already separate windows; the inner gap applies to each side of a window, so two windows sit twice that apart.")
+            hint: Tr.t("Dwindle splits the space each new window lands in, Master keeps one large window beside a stack, and Scrolling lays windows in a row wider than the screen. The preview below is live and at full size. The border stays at zero because gaps and rounding already separate windows; the inner gap applies to each side of a window, so two windows sit twice that apart.")
 
             SettingBlock {
                 WindowsPreview {
@@ -170,6 +170,17 @@ SettingsSection {
                     glassed: SettingsService.windowGlass && CompositorService.glassAvailable
                     lifted: SettingsService.windowShadow
                     wallpaper: WallpaperService.currentWallpaper
+                }
+            }
+
+            SettingRow {
+                label: Tr.t("Layout")
+
+                SegmentedControl {
+                    options: CompositorService.windowLayouts.map(
+                        entry => ({ id: entry.id, label: Tr.t(entry.label) }))
+                    current: CompositorService.windowLayout
+                    onSelected: id => CompositorService.remember("general:layout", id)
                 }
             }
 
@@ -474,6 +485,22 @@ SettingsSection {
         Layout.fillWidth: true
         spacing: root.spacing
         visible: root.tab === "motion"
+
+        SettingGroup {
+            title: Tr.t("Game mode")
+            note: Tr.t("Everything still, for a game or a slow machine.")
+            hint: Tr.t("Stops the shell's animations, the spectrum and the pet, and turns off Hyprland's animations, blur, shadow and glass. The settings below are kept and come back when it is turned off.")
+
+            SettingRow {
+                label: Tr.t("Game mode")
+                reading: ShortcutService.current("Shell · Turn game mode on or off")
+
+                ToggleSwitch {
+                    checked: SettingsService.gameMode
+                    onToggled: checked => SettingsService.set("gameMode", checked)
+                }
+            }
+        }
 
         SettingGroup {
             title: Tr.t("The shell")

@@ -1,11 +1,13 @@
 // ╭──────────────────────────────────────────────────────────────────────────╮
 // │                                                                          │
 // │   I S L A N D   S U M M A R Y                                            │
-// │   hover summary · the time and what is playing                           │
+// │   hover summary · one face, and a strip for the rest                     │
 // │                                                                          │
 // │   github.com/andreumassanet/impasto                                      │
 // │                                                                          │
 // ╰──────────────────────────────────────────────────────────────────────────╯
+
+pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
@@ -13,12 +15,17 @@ import Quickshell.Widgets
 
 import "../../theme"
 import "../../services"
+import "../../components"
 
-// The glance, in two faces. With a player: the cover large, the track and its
-// three controls, and the time large at the far end with the day and the date
-// under it. Without one: the time large with the weather on a small line under
-// it, where the weather is already asked for, and at the far end five days of
-// the week with today in the middle. The controls are the only things on it to
+// The glance is always one face: a square at the near end, what it is beside
+// it with its controls, and the time large at the far end with the day and
+// the date under it. The face is the running thing with the most to press
+// (`ModuleService.glanceFace`); everything else running is a chip on a strip
+// under it. With nothing running the weather is the face, and without the
+// weather the time is alone. The square is a slot, not a box: a cover fills
+// it, and every other mark is drawn to fill it on the black.
+//
+// The square, the controls and the chips are the only things on it to
 // press; a click anywhere else is the control centre.
 Item {
     id: root
@@ -28,214 +35,459 @@ Item {
         precision: SystemClock.Minutes
     }
 
-    Component.onCompleted: MediaService.subscribe()
-    Component.onDestruction: MediaService.release()
+    Component.onCompleted: LyricsService.subscribe()
+    Component.onDestruction: LyricsService.release()
 
-    readonly property bool media: MediaService.available
+    readonly property string face: ModuleService.glanceFace
     readonly property var locale: Qt.locale(SettingsService.language)
+    readonly property int margin: ModuleService.glanceMargin
+    readonly property int square: ModuleService.glanceFaceHeight - 2 * root.margin
 
-    readonly property int margin: 19
+    // What is in use, each in its fixed colour, as the island marks it.
+    readonly property var privacyMarks: [
+        { on: PrivacyService.microphone, glyph: "󰍬", tint: Theme.privacyMicrophone },
+        { on: PrivacyService.cameraOn,   glyph: "󰄀", tint: Theme.privacyCamera },
+        { on: PrivacyService.screen,     glyph: "󰍹", tint: Theme.privacyScreen }
+    ].filter(mark => mark.on)
+    // The first machine running, and what it is doing.
+    readonly property var machine: VmService.running[0] ?? null
+    readonly property string machineState: !root.machine ? ""
+        : root.machine.paused ? Tr.t("Paused")
+        : [Tr.t("Running"), VmService.uptime(root.machine.started),
+           VmService.running.length > 1 ? `${VmService.running.length} ${Tr.t("running")}` : ""]
+            .filter(part => part !== "").join(" · ")
 
-    // ── WITH A PLAYER ───────────────────────────────────────────────────────
+    readonly property string privacyName: Tr.t(PrivacyService.microphone ? "Microphone"
+        : PrivacyService.cameraOn ? "Camera" : "Screen")
+
+    // The line being sung, once the lyrics have a first one; a gap between
+    // verses is a note rather than the artist coming back.
+    readonly property bool singing: LyricsService.available && LyricsService.synced
+        && LyricsService.current >= 0
+    readonly property string lyric: root.singing
+        ? (LyricsService.currentText !== "" ? LyricsService.currentText : "♪") : ""
+
+    // What a mark does at rest, for the square and the chips alike: the
+    // take stops, the machine opens its panel, the rest open their detail
+    // — the music's opens out round its lyrics when it has them.
+    function press(id: string): void {
+        if (id === "recorder")
+            RecorderService.stop()
+        else if (id === "machine")
+            ModuleService.togglePanel("machines")
+        else
+            ModuleService.activate(id)
+    }
+
+    function title(id: string): string {
+        switch (id) {
+        case "media":
+            return MediaService.title || MediaService.identity
+        case "timer":
+            return TimerService.label || Tr.t("Timer")
+        case "recorder":
+            return Tr.t("Recording")
+        case "machine":
+            return root.machine?.title ?? ""
+        case "privacy":
+            return root.privacyName
+        case "weather":
+            return [`${WeatherService.temperature}°`, WeatherService.description]
+                .filter(part => part !== "").join(" · ")
+        }
+        return ""
+    }
+
+    function value(id: string): string {
+        switch (id) {
+        case "media":
+            return MediaService.artist
+        case "timer":
+            return TimerService.display
+        case "recorder":
+            return `${Tr.t(RecorderService.subject)} · ${RecorderService.display}`
+        case "machine":
+            return root.machineState
+        case "privacy":
+            return PrivacyService.who
+        case "weather":
+            return [WeatherService.place, `${WeatherService.high}° / ${WeatherService.low}°`]
+                .filter(part => part !== "").join(" · ")
+        }
+        return ""
+    }
+
+    // ── FACE ────────────────────────────────────────────────────────────────
 
     Item {
-        anchors.fill: parent
-        visible: root.media
+        id: slot
+
+        x: root.margin
+        y: root.margin
+        width: root.square
+        height: root.square
+        visible: root.face !== "clock"
+
+        MouseArea {
+            anchors.fill: parent
+            enabled: root.face !== "privacy"
+            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+            onClicked: root.press(root.face)
+        }
+
+        // Drawn once loaded: a parent hidden on its own `visible` would never
+        // show the picture that decides it.
+        readonly property bool cover: MediaService.artUrl !== "" && art.status === Image.Ready
 
         ClippingRectangle {
-            id: cover
-
-            x: root.margin
-            anchors.verticalCenter: parent.verticalCenter
-            width: parent.height - 2 * root.margin
-            height: width
+            anchors.fill: parent
+            visible: root.face === "media" && slot.cover
             radius: width * Theme.pictureCorner
-            // Only under the placeholder: a player that sends its own logo
-            // rather than a cover sends it on transparency, and a box behind
-            // it reads as part of the picture.
-            color: art.visible ? "transparent" : Theme.surfaceHoverIn(QsWindow.window)
+            color: "transparent"
 
             Image {
                 id: art
 
                 anchors.fill: parent
                 source: MediaService.artUrl
-                visible: source != "" && status === Image.Ready
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 sourceSize.width: 288
                 sourceSize.height: 288
             }
-
-            Text {
-                anchors.centerIn: parent
-                visible: !art.visible
-                text: "󰎇"
-                font.family: Theme.fontMono
-                font.pixelSize: 34
-                color: Theme.indicator
-            }
         }
 
-        Column {
-            anchors.left: cover.right
-            anchors.leftMargin: 16
-            anchors.right: time.left
-            anchors.rightMargin: 16
-            anchors.verticalCenter: cover.verticalCenter
+        Glyph {
+            visible: root.face === "media" && !slot.cover
+            text: "󰎇"
+            font.pixelSize: Math.round(slot.width * 0.78)
+        }
+
+        RingIndicator {
+            anchors.fill: parent
+            anchors.margins: 6
+            visible: root.face === "timer"
+            thickness: 10
+            progress: TimerService.progress
+            trackColor: Theme.indicatorDim
+            fillColor: TimerService.tint
+        }
+
+        // The dot, and a faint ring round it for the room it would fill.
+        Rectangle {
+            anchors.centerIn: parent
+            visible: root.face === "recorder"
+            width: Math.round(slot.width * 0.86)
+            height: width
+            radius: width / 2
+            color: "transparent"
+            border.width: 3
+            border.color: Theme.indicatorBad
+            opacity: 0.35
+        }
+
+        Rectangle {
+            anchors.centerIn: parent
+            visible: root.face === "recorder"
+            width: Math.round(slot.width * 0.5)
+            height: width
+            radius: width / 2
+            color: Theme.indicatorBad
+        }
+
+        Glyph {
+            visible: root.face === "machine"
+            text: VmService.mark(root.machine?.os ?? "")
+            font.pixelSize: Math.round(slot.width * 0.82)
+        }
+
+        Glyph {
+            visible: root.face === "weather"
+            text: WeatherService.glyph
+            font.pixelSize: Math.round(slot.width * 0.86)
+        }
+
+        Row {
+            anchors.centerIn: parent
+            visible: root.face === "privacy"
             spacing: 4
 
-            Text {
-                width: parent.width
-                text: MediaService.title || MediaService.identity
-                elide: Text.ElideRight
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeMedium
-                font.weight: Font.Bold
-                color: Theme.text
-            }
+            Repeater {
+                model: root.privacyMarks
 
-            Text {
-                width: parent.width
-                visible: text !== ""
-                text: MediaService.artist
-                elide: Text.ElideRight
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeRegular
-                color: Theme.textMuted
-            }
+                Text {
+                    required property var modelData
 
-            Item {
-                width: 1
-                height: 10
-            }
-
-            Row {
-                spacing: 8
-
-                Control {
-                    glyph: "󰒮"
-                    size: 17
-                    live: MediaService.canPrevious
-                    onPressed: MediaService.previous()
-                }
-
-                Control {
-                    glyph: MediaService.playing ? "󰏤" : "󰐊"
-                    size: 22
-                    live: MediaService.canToggle
-                    onPressed: MediaService.toggle()
-                }
-
-                Control {
-                    glyph: "󰒭"
-                    size: 17
-                    live: MediaService.canNext
-                    onPressed: MediaService.next()
+                    text: modelData.glyph
+                    font.family: Theme.fontMono
+                    font.pixelSize: Math.round(slot.width
+                        * (root.privacyMarks.length > 2 ? 0.34 : root.privacyMarks.length > 1 ? 0.48 : 0.72))
+                    color: modelData.tint
                 }
             }
-        }
-
-        Clock {
-            id: time
-
-            anchors.right: parent.right
-            anchors.rightMargin: root.margin + 4
-            anchors.verticalCenter: cover.verticalCenter
-            align: Text.AlignRight
-            timeSize: 62
         }
     }
 
-    // ── WITHOUT ONE ─────────────────────────────────────────────────────────
+    Column {
+        anchors.left: slot.right
+        anchors.leftMargin: 16
+        anchors.right: time.left
+        anchors.rightMargin: 28
+        anchors.verticalCenter: slot.verticalCenter
+        visible: root.face !== "clock"
+        spacing: 4
 
-    Item {
-        anchors.fill: parent
-        visible: !root.media
+        Text {
+            width: parent.width
+            text: root.title(root.face)
+            elide: Text.ElideRight
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeMedium
+            font.weight: Font.Bold
+            color: Theme.text
+        }
 
-        Column {
-            x: root.margin + 4
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: -4
+        // Under the music's title, the line being sung once there is one.
+        Text {
+            id: line
 
-            Text {
-                text: Qt.formatDateTime(clock.date, SettingsService.clockFormat)
-                font.family: Theme.fontFamily
-                font.pixelSize: 62
-                font.weight: Font.Black
-                color: Theme.text
+            width: parent.width
+            visible: text !== ""
+            text: root.lyric !== "" ? root.lyric : root.value(root.face)
+            elide: Text.ElideRight
+            wrapMode: root.lyric !== "" ? Text.Wrap : Text.NoWrap
+            maximumLineCount: 2
+            font.family: root.face === "timer" ? Theme.fontMono : Theme.fontFamily
+            font.pixelSize: Theme.fontSizeRegular
+            color: root.lyric !== "" ? Theme.text : Theme.textMuted
+
+            onTextChanged: {
+                if (root.lyric !== "")
+                    turn.restart()
             }
 
-            Row {
-                visible: ModuleService.summaryWeather
-                spacing: 6
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: WeatherService.glyph
-                    font.family: Theme.fontMono
-                    font.pixelSize: Theme.fontSizeRegular
-                    color: Theme.textMuted
-                }
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: [`${WeatherService.temperature}°`, WeatherService.place ?? ""]
-                        .filter(part => part !== "").join("  ·  ")
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall + 1
-                    font.weight: Font.DemiBold
-                    color: Theme.textMuted
-                }
+            NumberAnimation {
+                id: turn
+                target: line
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: Theme.durationMedium
+                easing.type: Theme.easing
             }
         }
 
-        // Five days, today in the middle: its short name over its date, lit;
-        // the others a letter over a date, dim.
+        Item {
+            width: 1
+            height: 10
+            visible: controls.visible
+        }
+
         Row {
-            anchors.right: parent.right
-            anchors.rightMargin: root.margin + 2
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 2
+            id: controls
 
-            Repeater {
-                model: 5
+            visible: ["media", "timer", "machine", "recorder"].includes(root.face)
+            spacing: 8
 
-                Column {
-                    id: day
+            Control {
+                visible: root.face === "media"
+                glyph: "󰒮"
+                size: 17
+                live: MediaService.canPrevious
+                onPressed: MediaService.previous()
+            }
 
-                    required property int index
+            Control {
+                visible: root.face === "media"
+                glyph: MediaService.playing ? "󰏤" : "󰐊"
+                size: 22
+                live: MediaService.canToggle
+                onPressed: MediaService.toggle()
+            }
 
-                    readonly property date date: {
-                        const shown = new Date(clock.date)
-                        shown.setDate(shown.getDate() + day.index - 2)
-                        return shown
+            Control {
+                visible: root.face === "media"
+                glyph: "󰒭"
+                size: 17
+                live: MediaService.canNext
+                onPressed: MediaService.next()
+            }
+
+            Control {
+                visible: root.face === "timer"
+                glyph: "󰑐"
+                size: 17
+                onPressed: TimerService.restart()
+            }
+
+            Control {
+                visible: root.face === "timer"
+                glyph: TimerService.paused ? "󰐊" : "󰏤"
+                size: 22
+                onPressed: TimerService.toggle()
+            }
+
+            Control {
+                visible: root.face === "timer"
+                glyph: "󰅖"
+                size: 17
+                onPressed: TimerService.cancel()
+            }
+
+            Control {
+                visible: root.face === "machine"
+                glyph: "󰍹"
+                size: 17
+                onPressed: VmService.open(root.machine?.name ?? "")
+            }
+
+            Control {
+                visible: root.face === "machine"
+                glyph: root.machine?.paused ? "󰐊" : "󰏤"
+                size: 22
+                onPressed: root.machine?.paused ? VmService.resume(root.machine.name)
+                                                : VmService.pause(root.machine?.name ?? "")
+            }
+
+            Control {
+                visible: root.face === "machine"
+                glyph: "󰐥"
+                size: 17
+                onPressed: VmService.stop(root.machine?.name ?? "")
+            }
+
+            Control {
+                visible: root.face === "recorder"
+                glyph: "󰓛"
+                size: 22
+                onPressed: RecorderService.stop()
+            }
+        }
+    }
+
+    // The same block in every face; alone, it is centred.
+    Clock {
+        id: time
+
+        x: root.face === "clock" ? Math.round((root.width - width) / 2)
+            : root.width - width - root.margin - 4
+        anchors.verticalCenter: slot.verticalCenter
+    }
+
+    // ── STRIP ───────────────────────────────────────────────────────────────
+
+    // Everything else running, one chip each: the island's mark, the name
+    // and a reading. A chip does what that thing's mark does at rest.
+    Row {
+        x: root.margin + 4
+        y: ModuleService.glanceFaceHeight - root.margin + 14
+        height: 24
+        spacing: 22
+
+        Repeater {
+            model: ModuleService.glanceStrip
+
+            Item {
+                id: chip
+
+                required property string modelData
+
+                width: content.width
+                height: 24
+
+                MouseArea {
+                    anchors.fill: parent
+                    enabled: chip.modelData !== "privacy"
+                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: root.press(chip.modelData)
+                }
+
+                Row {
+                    id: content
+
+                    height: 24
+                    spacing: 8
+
+                    Item {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: chip.modelData === "privacy" ? privacyChip.width : 24
+                        height: 24
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            visible: chip.modelData === "recorder"
+                            width: 10
+                            height: 10
+                            radius: 5
+                            color: Theme.indicatorBad
+                        }
+
+                        Row {
+                            id: privacyChip
+
+                            anchors.centerIn: parent
+                            visible: chip.modelData === "privacy"
+                            spacing: 2
+
+                            Repeater {
+                                model: root.privacyMarks
+
+                                Text {
+                                    required property var modelData
+
+                                    text: modelData.glyph
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: Theme.fontSizeMedium
+                                    color: modelData.tint
+                                }
+                            }
+                        }
+
+                        RingIndicator {
+                            anchors.centerIn: parent
+                            visible: chip.modelData === "timer"
+                            width: 16
+                            height: 16
+                            thickness: 2
+                            progress: TimerService.progress
+                            trackColor: Theme.indicatorDim
+                            fillColor: TimerService.tint
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            visible: chip.modelData === "machine"
+                            text: VmService.mark(root.machine?.os ?? "")
+                            font.family: Theme.fontMono
+                            font.pixelSize: Theme.fontSizeMedium
+                            color: Theme.text
+                        }
                     }
-                    readonly property bool today: day.index === 2
-                    readonly property string name: root.locale.toString(day.date, "ddd")
-                        .replace(".", "").toUpperCase()
-
-                    width: 30
-                    spacing: 3
 
                     Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: day.today ? day.name : day.name.charAt(0)
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.min(implicitWidth, 150)
+                        elide: Text.ElideRight
+                        text: root.title(chip.modelData)
                         font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSizeLabel
-                        font.weight: Font.Bold
-                        color: day.today ? Theme.accent : Theme.textMuted
-                        opacity: day.today ? 1 : 0.7
+                        font.pixelSize: Theme.fontSizeRegular
+                        font.weight: Font.DemiBold
+                        color: Theme.text
                     }
 
+                    // Three or more, the readings that are words give way.
                     Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: day.date.getDate()
-                        font.family: Theme.fontFamily
-                        font.pixelSize: day.today ? 19 : 15
-                        font.weight: day.today ? Font.Black : Font.DemiBold
-                        color: day.today ? Theme.text : Theme.textMuted
-                        opacity: day.today ? 1 : 0.55
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: ModuleService.glanceStrip.length < 3
+                            || chip.modelData === "recorder" || chip.modelData === "timer"
+                        width: Math.min(implicitWidth, 110)
+                        elide: Text.ElideRight
+                        text: chip.modelData === "recorder" ? RecorderService.display
+                            : root.value(chip.modelData)
+                        font.family: chip.modelData === "recorder" || chip.modelData === "timer"
+                            ? Theme.fontMono : Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeRegular
+                        color: Theme.textMuted
                     }
                 }
             }
@@ -244,27 +496,35 @@ Item {
 
     // ── PIECES ──────────────────────────────────────────────────────────────
 
+    // A mark drawn in the square at the size it is given.
+    component Glyph: Text {
+        anchors.centerIn: parent
+        font.family: Theme.fontMono
+        color: Theme.text
+    }
+
     // The time in the heaviest weight, the day and the date under it in
     // capitals.
     component Clock: Column {
         id: face
 
-        property int align: Text.AlignRight
-        property int timeSize: 62
-
+        // Its own width, since its lines hang from its right edge.
+        width: Math.max(hour.implicitWidth, weekday.implicitWidth, date.implicitWidth)
         spacing: -6
 
         Text {
-            anchors.right: face.align === Text.AlignRight ? parent.right : undefined
+            id: hour
+            anchors.right: parent.right
             text: Qt.formatDateTime(clock.date, SettingsService.clockFormat)
             font.family: Theme.fontFamily
-            font.pixelSize: face.timeSize
+            font.pixelSize: 62
             font.weight: Font.Black
             color: Theme.text
         }
 
         Text {
-            anchors.right: face.align === Text.AlignRight ? parent.right : undefined
+            id: weekday
+            anchors.right: parent.right
             text: root.locale.toString(clock.date, "dddd").toUpperCase()
             font.family: Theme.fontFamily
             font.pixelSize: 20
@@ -273,7 +533,8 @@ Item {
         }
 
         Text {
-            anchors.right: face.align === Text.AlignRight ? parent.right : undefined
+            id: date
+            anchors.right: parent.right
             text: root.locale.toString(clock.date, "d MMMM").toUpperCase()
             font.family: Theme.fontFamily
             font.pixelSize: 15

@@ -84,7 +84,11 @@ Singleton {
         { id: "sticker",  label: "Sticker" }
     ]
 
+    // The lyrics have one face in every theme, as a note is paper in every
+    // theme: a sentence is not an object to draw.
     function themeOf(widget: var): string {
+        if (widget && widget.id === "lyrics")
+            return "lyrics"
         const own = widget ? widget.theme : ""
         return own && root.themes.some(theme => theme.id === own)
             ? own : SettingsService.desktopTheme
@@ -126,6 +130,11 @@ Singleton {
             clock: ["2x2", "4x2", "4x4", "8x2"],    photo: ["2x2", "4x2", "4x4", "8x2"],
             spectrum: ["4x2", "8x2", "4x4"]
         },
+        // Not a theme: the lyrics, which wear one face in every theme
+        // (`themeOf`).
+        lyrics: {
+            lyrics: ["2x2", "4x2", "8x2", "4x4"]
+        },
         sticker: {
             media: ["2x2", "4x2", "4x4"],           timer: ["2x2", "4x2"],
             claude: ["2x2", "4x2"],                 battery: ["2x2", "4x2"],
@@ -144,6 +153,8 @@ Singleton {
 
     // `theme` defaults to the desktop's.
     function familiesFor(id: string, theme = ""): var {
+        if (id === "lyrics")
+            return root.faces.lyrics.lyrics
         const table = root.faces[theme !== "" ? theme : SettingsService.desktopTheme]
             ?? root.faces.modern
         return table[id] ?? ["4x2"]
@@ -295,13 +306,12 @@ Singleton {
     // Laid out over the screen below the bar, dock or no dock, then placed
     // on the board, which the dock's inset has moved: the dock is drawn over
     // the widgets, and reserving, hiding or moving it moves none of them.
+    // Zen leaves the grid below the bar too, so hiding the bar moves nothing.
     function wholeGrid(width: real, height: real): var {
         const grid = root.gridFor(width + root.insets.left + root.insets.right,
-            height + root.insets.bottom + root.zenBand)
-        if (width > 0 && height > 0) {
+            height + root.insets.bottom)
+        if (width > 0 && height > 0)
             grid.originX -= root.insets.left
-            grid.originY -= root.zenBand
-        }
         return grid
     }
 
@@ -312,10 +322,6 @@ Singleton {
         return DeckService.edgeAt(x + root.insets.left, y,
             width + root.insets.left + root.insets.right, height + root.insets.bottom)
     }
-
-    // In zen the bar's band is free, and the grid is laid out over the whole
-    // screen, its squares resized so the margins stay even on all four sides.
-    readonly property real zenBand: SettingsService.barHidden ? root.insets.top : 0
 
     // Every widget off the picture (`desktopHidden`), except while arranging.
     readonly property bool hidden: SettingsService.desktopHidden && !root.editing
@@ -972,12 +978,13 @@ Singleton {
     // Sound bars along a whole edge, one per edge. The box runs to the
     // screen's own edge, past the dock's band, so it is measured from the
     // board out by the insets: the bottom from corner to corner, a side from
-    // under the bar to the bottom — or to the top of the bottom's bars, which
-    // keep the corner, so the two never cross.
+    // the top of the screen, past the bar's band, to the bottom — or to the
+    // top of the bottom's bars, which keep the corner, so the two never cross.
 
     function spectrumBox(name: string, row: var, boardWidth: real, boardHeight: real): var {
         const reach = root.spectrumOf(row).reach
         const left = -root.insets.left
+        const top = -root.insets.top
         const width = boardWidth + root.insets.left + root.insets.right
         const height = boardHeight + root.insets.bottom
         if (row.edge === "bottom")
@@ -985,8 +992,8 @@ Singleton {
         const bottom = root.spectrumOn(name, "bottom")
         return {
             x: row.edge === "right" ? left + width - reach : left,
-            y: 0, width: reach,
-            height: bottom !== null ? height - root.spectrumOf(bottom).reach : height
+            y: top, width: reach,
+            height: (bottom !== null ? height - root.spectrumOf(bottom).reach : height) - top
         }
     }
 

@@ -895,7 +895,7 @@ Item {
             // as a live clock face.
 
             Text {
-                visible: root.moduleId !== "notes" && !root.onSpectrum
+                visible: root.moduleId !== "notes" && root.moduleId !== "lyrics" && !root.onSpectrum
                 text: Tr.t("Face")
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeLabel
@@ -904,7 +904,7 @@ Item {
             }
 
             Row {
-                visible: root.moduleId !== "notes" && !root.onSpectrum
+                visible: root.moduleId !== "notes" && root.moduleId !== "lyrics" && !root.onSpectrum
                 spacing: 8
 
                 Repeater {
@@ -956,7 +956,7 @@ Item {
 
             // Which theme, and whether it is the desktop's.
             Text {
-                visible: root.styled
+                visible: root.styled && root.moduleId !== "lyrics"
                 width: parent.width
                 text: {
                     const theme = DesktopService.themes.find(
@@ -987,7 +987,7 @@ Item {
                     height: 40
                     icon: "󰊸"
                     value: DesktopService.opacityOf(root.row)
-                    from: 20
+                    from: 0
                     to: 100
                     onMoved: value => DesktopService.setOpacity(root.key, Math.round(value))
                 }

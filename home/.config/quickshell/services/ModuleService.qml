@@ -33,7 +33,8 @@ Singleton {
     //            the desktop and behind their panels instead)
     //   desk     false for the one module with no desktop face
     //   width    detail size; none for the spectrum, which has no detail and
-    //   height   lives only on the desktop, on the grid or along an edge
+    //   height   lives only on the desktop, on the grid or along an edge, nor
+    //            for the lyrics, whose detail is the player's
     //
     // The chip look is global (`SettingsService.chipShape`, `chipFigure`);
     // desktop faces are listed per theme in `DesktopService.faces`.
@@ -59,6 +60,7 @@ Singleton {
         { id: "tasks",         name: "Tasks",         bar: false, width: Theme.cardWidth, height: Theme.cardHeight(4, 0) },
         { id: "photo",         name: "Photo",         bar: false, width: 356, height: 150 },
         { id: "spectrum",      name: "Spectrum",      bar: false, width: 0,   height: 0 },
+        { id: "lyrics",        name: "Lyrics",        bar: false, width: 0,   height: 0 },
         { id: "clock",         name: "Clock",         bar: false,
           width: SettingsService.clockShowsDate ? 240 : 150, height: Theme.capsuleHeight },
         { id: "tray",          name: "System tray",  bar: true, width: 120, height: Theme.capsuleHeight }
@@ -201,6 +203,8 @@ Singleton {
             return NotificationService.doNotDisturb ? "󰂛" : "󰂚"
         case "media":
             return "󰎇"
+        case "lyrics":
+            return "󰍰"
         case "timer":
             return "󰔛"
         case "stats":
@@ -334,7 +338,7 @@ Singleton {
     // without affecting its module; so can the privacy mark, which has no
     // module, and the service behind it is not built while it is off. A
     // recording cannot, since nothing else on screen shows or stops it.
-    readonly property var activities: {
+    readonly property var running: {
         const list = []
         if (RecorderService.recording)
             list.push("recorder")
@@ -344,11 +348,21 @@ Singleton {
             list.push("timer")
         if (MediaService.playing && SettingsService.beside("media"))
             list.push("media")
-        // Always there when kept, so it is last: the others come and go.
-        if (SettingsService.beside("workspace"))
-            list.push("workspace")
-        return list.slice(0, 2)
+        // Last of those that come and go: a machine can run for hours.
+        if (VmService.running.length > 0 && SettingsService.beside("machine"))
+            list.push("machine")
+        return list
     }
+
+    // The workspace is always there when kept, so it is last: the others
+    // come and go.
+    readonly property var activities: (SettingsService.beside("workspace")
+        ? root.running.concat(["workspace"]) : root.running).slice(0, 2)
+
+    // What is running but did not fit, counted at the island's trailing end.
+    // The workspace never counts: it is not something that started.
+    readonly property int overflow: Math.max(0, root.running.length - 2)
+    readonly property int overflowWidth: 30
 
     // Resting width. Alone, the time keeps the catalogue width; with
     // activities it shrinks to fit and each side gets a slot. One activity
@@ -379,10 +393,12 @@ Singleton {
     readonly property int restWidth: root.activities.length === 0
         ? root.entry("clock").width
         : root.clockCore + 2 * root.activitySide
+            + (root.overflow > 0 ? root.overflowWidth : 0)
 
-    // The glance the island opens under a resting pointer: with a player,
-    // the cover, the controls and the time large beside them; without one,
-    // the time large, the weather under it and five days of the week.
+    // The glance the island opens under a resting pointer: one face — a
+    // square, the text beside it, the time large at the far end — and a
+    // strip of chips under it for whatever else is running. With nothing
+    // running the weather is the face, and without it the time alone.
     //
     // The weather only where it is already being asked for, on the bar or
     // on the desktop: touching the service builds it, and building it makes
@@ -392,17 +408,53 @@ Singleton {
         && WeatherService.available
 
     // The widths fit a 24-hour time; a longer format (seconds, AM/PM) widens
-    // the glance by what it adds, measured at the glance's type.
-    readonly property int summaryWidth: (MediaService.available ? 500 : 390)
-        + Math.max(0, Math.ceil(root.timeMetrics.advanceWidth(
-            Qt.formatTime(new Date(2000, 0, 1, 20, 48, 58), SettingsService.clockFormat))
-            - root.timeMetrics.advanceWidth("20:48")))
+    // the glance by what it adds, measured at the glance's type. The music
+    // is wider, for a line of lyrics beside the time; the rest leave their
+    // reading 170 px, which a weather line or a machine's state needs.
+    readonly property int summaryWidth: root.glanceFace === "clock"
+        ? root.glanceTime + 2 * (root.glanceMargin + 4)
+        : (root.glanceFace === "media" ? 620 : 560) + root.glanceTime - root.glanceTimeBase
+    // Measured again when the type changes: a call is not a dependency.
+    readonly property int glanceTimeBase: root.timeMetrics.font.family !== ""
+        ? Math.ceil(root.timeMetrics.advanceWidth("20:48")) : 0
+    readonly property int glanceTime: root.timeMetrics.font.family !== ""
+        ? Math.max(root.glanceTimeBase, Math.ceil(root.timeMetrics.advanceWidth(
+            Qt.formatTime(new Date(2000, 0, 1, 20, 48, 58), SettingsService.clockFormat))))
+        : 0
     readonly property FontMetrics timeMetrics: FontMetrics {
         font.family: Theme.fontFamily
         font.pixelSize: 62
         font.weight: Font.Black
     }
-    readonly property int summaryHeight: MediaService.available ? 150 : 118
+    readonly property int summaryHeight: root.glanceFaceHeight
+        + (root.glanceStrip.length > 0 ? root.glanceStripHeight : 0)
+
+    // Everything running, in the island's order. Its own count, not the
+    // island's: a countdown kept off the island still shows here. The
+    // privacy mark does not, since its service is not built while it is off.
+    readonly property var glanceRows: {
+        const list = []
+        if (RecorderService.recording)
+            list.push("recorder")
+        if (SettingsService.beside("privacy") && PrivacyService.active)
+            list.push("privacy")
+        if (TimerService.running)
+            list.push("timer")
+        if (MediaService.available)
+            list.push("media")
+        if (VmService.running.length > 0)
+            list.push("machine")
+        return list
+    }
+    // The face is what has the most to press: the music, then the countdown,
+    // the machine, the take, and the privacy mark, which has nothing.
+    readonly property var glanceRank: ["media", "timer", "machine", "recorder", "privacy"]
+    readonly property string glanceFace: root.glanceRank.find(id => root.glanceRows.includes(id))
+        ?? (root.summaryWeather ? "weather" : "clock")
+    readonly property var glanceStrip: root.glanceRows.filter(id => id !== root.glanceFace)
+    readonly property int glanceMargin: 19
+    readonly property int glanceFaceHeight: 150
+    readonly property int glanceStripHeight: 38
 
     // ── OPEN DETAIL ─────────────────────────────────────────────────────────
     //
@@ -445,6 +497,8 @@ Singleton {
         if (id === "brightness")
             return { width: item.width,
                      height: Theme.cardHeight(Math.max(1, BrightnessService.dimmable.length), 0) }
+        if (id === "media" && LyricsService.available)
+            return { width: 880, height: 440 }
         if (id === "media")
             return { width: item.width, height: MediaService.seekable
                 ? Theme.cardHeight(1, Theme.cardRowGap + 34) : Theme.cardHeight(0, 34) }
@@ -539,6 +593,9 @@ Singleton {
             return TasksService.ready
         case "photo":
             // An empty one asks for a picture.
+            return true
+        case "lyrics":
+            // With nothing playing it says so, as the player does.
             return true
         }
         return false

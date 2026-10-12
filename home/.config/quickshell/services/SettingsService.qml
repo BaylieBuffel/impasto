@@ -35,9 +35,11 @@ Singleton {
     readonly property alias barStyle: config.barStyle
     readonly property alias barEverywhere: config.barEverywhere
     readonly property alias barHidden: config.barHidden
+    readonly property alias gameMode: config.gameMode
     readonly property alias barLeft: config.barLeft
     readonly property alias barRight: config.barRight
     readonly property alias islandSummary: config.islandSummary
+    readonly property alias lyrics: config.lyrics
     readonly property alias islandActivities: config.islandActivities
     readonly property alias chipShape: config.chipShape
     readonly property alias chipFigure: config.chipFigure
@@ -75,6 +77,8 @@ Singleton {
     readonly property alias clipboardWipeOnLock: config.clipboardWipeOnLock
     readonly property alias lockBlur: config.lockBlur
     readonly property alias lockClock: config.lockClock
+    readonly property alias lockMusic: config.lockMusic
+    readonly property alias lockMusicGround: config.lockMusicGround
     readonly property alias userName: config.userName
     readonly property alias userAvatar: config.userAvatar
     readonly property alias doNotDisturb: config.doNotDisturb
@@ -231,9 +235,25 @@ Singleton {
     // out still works on the bar; it just doesn't take a side of the island.
     // `privacy` is the microphone, camera or screen in use, which has no
     // module. A recording is always there, and is not on this list.
-    readonly property var besideDefaults: ["privacy", "timer", "media"]
+    readonly property var besideDefaults: ["privacy", "timer", "media", "machine"]
     // Every one the settings offer; the workspace is off until chosen.
-    readonly property var besideChoices: ["privacy", "timer", "media", "workspace"]
+    readonly property var besideChoices: ["privacy", "timer", "media", "machine", "workspace"]
+
+    // A kept list predates any choice added since: one that is on by default
+    // joins it once, and stays off if it is taken off after that. A list kept
+    // before this was remembered saw the first four.
+    function welcomeActivities(): void {
+        const kept = config.islandActivities
+        if (!kept)
+            return
+        const seen = config.islandActivitiesSeen
+            ? Array.from(config.islandActivitiesSeen) : ["privacy", "timer", "media", "workspace"]
+        const fresh = root.besideDefaults.filter(id => seen.indexOf(id) < 0 && Array.from(kept).indexOf(id) < 0)
+        if (fresh.length === 0 && seen.length === root.besideChoices.length)
+            return
+        config.islandActivities = Array.from(kept).concat(fresh)
+        config.islandActivitiesSeen = root.besideChoices.slice()
+    }
 
     function beside(id: string): bool {
         const kept = config.islandActivities
@@ -247,6 +267,7 @@ Singleton {
         if (on)
             next.push(id)
         root.set("islandActivities", next)
+        root.set("islandActivitiesSeen", root.besideChoices.slice())
     }
 
     // ── CHIPS ───────────────────────────────────────────────────────────────
@@ -310,6 +331,7 @@ Singleton {
         "userName", "userAvatar", "language", "keyboard", "weatherPlace", "githubUser",
         "emojiTone",
         "doNotDisturb", "nightLight", "nightTemperature", "barHidden", "desktopHidden",
+        "gameMode",
         "recorderAudio", "captureShape", "captureKind"
     ]
 
@@ -431,6 +453,7 @@ Singleton {
         onAdapterUpdated: saver.restart()
         onLoaded: {
             root.arrived = true
+            root.welcomeActivities()
             // A ground named "frosted" is read as glass.
             for (const key of ["surfaceStyle", "desktopGround", "dockGround"])
                 if (config[key] === "frosted")
@@ -488,6 +511,10 @@ Singleton {
         // island still comes down for what it has to show.
         property bool barHidden: false
 
+        // Game mode: no animations, blur, shadow or glass on the compositor,
+        // over whatever the rest of the settings say.
+        property bool gameMode: false
+
         // Three shadows, one per layer: Hyprland's under the windows, the
         // shell's under the bar and the dock, and under the desk's widgets.
         property bool windowShadow: false
@@ -529,8 +556,15 @@ Singleton {
         // control centre.
         property bool islandSummary: true
 
+        // The playing track's lyrics, looked up on lrclib.net while
+        // something on screen shows them.
+        property bool lyrics: true
+
         // Null means `besideDefaults`.
         property var islandActivities: null
+        // The choices there were when that list was kept, so one added since
+        // can join it once (`welcomeActivities`).
+        property var islandActivitiesSeen: null
 
         // One of `chipShapes` and one of `chipFigures`.
         property string chipShape: "icon"
@@ -571,6 +605,12 @@ Singleton {
         // "stacked", hours over minutes as the login screen draws them, or
         // "inline".
         property string lockClock: "stacked"
+
+        // What is playing on the lock: "lyrics" (the player and its lyrics),
+        // "player" or "off"; and behind it, the "cover" blurred or the
+        // "desktop" as without music.
+        property string lockMusic: "lyrics"
+        property string lockMusicGround: "cover"
 
         // Empty means read from the system: the passwd full name and
         // `~/.face` (`AccountService`).
