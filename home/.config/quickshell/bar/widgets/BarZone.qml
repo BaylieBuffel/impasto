@@ -108,7 +108,6 @@ Row {
         }
 
         readonly property int pad: group.chromeless || group.alone ? 0 : 4
-                                                 : group.present.length > 0)
         width: group.own
             ? (strip.item ? strip.item.implicitWidth : 0)
             : group.tray

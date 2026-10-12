@@ -796,10 +796,8 @@ Item {
                 Component {
                     id: laneTray
                     TrayTile {
->>>>>>> origin/main
                         side: lane.side
                         place: group.items[0].index
-                        entryId: group.kind
                     }
                 }
             }
@@ -1080,7 +1078,6 @@ Item {
         Component {
             id: pieceTray
             TrayTile { ghost: true }
->>>>>>> origin/main
         }
     }
 
