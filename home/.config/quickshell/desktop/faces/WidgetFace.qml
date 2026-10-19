@@ -38,6 +38,10 @@ Item {
     // reading needs it.
     property color tint: root.ink.text
 
+    // The caption's colour, for a caption that is itself the warning (a
+    // price's rise or fall).
+    property color noteTint: root.ink.muted
+
     // The reading's size: the same for every family except the band, which has
     // height to spare.
     property int readingSize: Theme.fontSizeWidget
@@ -140,7 +144,7 @@ Item {
             elide: Text.ElideRight
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
-            color: root.ink.muted
+            color: root.noteTint
         }
     }
 

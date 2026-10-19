@@ -87,17 +87,41 @@ Item {
     Repeater { id: repeater }
 
     // Touchpads send many small deltas; accumulate them to one step per 120.
-    WheelHandler {
-        property real turned: 0
+    // A WheelHandler hears only its own `orientation`, vertical unless told,
+    // so a sideways swipe needs a second one.
+    property real turned: 0
 
+    function turn(delta: real): void {
+        root.turned += delta
+        while (Math.abs(root.turned) >= 120) {
+            root.step(root.turned < 0 ? 1 : -1)
+            root.turned -= 120 * Math.sign(root.turned)
+        }
+    }
+
+    WheelHandler {
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-        onWheel: event => {
-            const delta = event.angleDelta.x !== 0 ? event.angleDelta.x : event.angleDelta.y
-            turned += delta
-            while (Math.abs(turned) >= 120) {
-                root.step(turned < 0 ? 1 : -1)
-                turned -= 120 * Math.sign(turned)
-            }
+        onWheel: event => root.turn(event.angleDelta.y)
+    }
+
+    WheelHandler {
+        orientation: Qt.Horizontal
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+        onWheel: event => root.turn(event.angleDelta.x)
+    }
+
+    // Held and dragged sideways: a step for every tile's width travelled,
+    // the strip following the pointer.
+    DragHandler {
+        property int from: 0
+
+        target: null
+        xAxis.enabled: true
+        yAxis.enabled: false
+        onActiveChanged: if (active) from = root.current
+        onTranslationChanged: {
+            if (active)
+                root.goTo(from - Math.round(translation.x / root.stride))
         }
     }
 }

@@ -1,0 +1,17 @@
+# ╭──────────────────────────────────────────────────────────────────────────╮
+# │                                                                          │
+# │   I M P A S T O                                                          │
+# │   plymouth theme · the boot splash, before the login screen              │
+# │                                                                          │
+# │   github.com/andreumassanet/impasto                                      │
+# │                                                                          │
+# ╰──────────────────────────────────────────────────────────────────────────╯
+
+[Plymouth Theme]
+Name=impasto
+Description=The palette, painted while the machine starts
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/impasto
+ScriptFile=/usr/share/plymouth/themes/impasto/impasto.script

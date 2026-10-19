@@ -43,7 +43,7 @@ Item {
         anchors.fill: parent
         radius: height / 2
         color: Theme.surfaceIn(QsWindow.window)
-        border.color: slider.hovered ? Theme.borderIn(QsWindow.window) : "transparent"
+        border.color: slider.hovered ? Theme.borderIn(QsWindow.window) : Qt.alpha(Theme.borderIn(QsWindow.window), 0)
         border.width: 1
         opacity: root.available ? 1 : 0.45
 

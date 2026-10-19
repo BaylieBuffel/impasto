@@ -10,6 +10,7 @@
 pragma Singleton
 
 import QtQuick
+import Quickshell
 
 import "../services"
 
@@ -29,12 +30,19 @@ QtObject {
     // themed surface. What changes is how much of it there is
     // (`SettingsService.surfaceStyle`): solid, or glass — the terminal's own
     // ground, the accent scaled towards black at kitty's opacity, over the
-    // compositor's blur, with a lit edge. `island` stays opaque for what is
+    // compositor's blur, with a lit edge — or liquid, a clear pane of light
+    // frosted over the blur, lit harder. `island` stays opaque for what is
     // cut out of it; the island, the capsules and the toasts are painted in
     // `islandGround`, and what sits on them in white washes.
-    readonly property string surfaceStyle: SettingsService.surfaceStyle
-    readonly property bool solid: root.surfaceStyle !== "glass"
-    readonly property bool glass: root.surfaceStyle === "glass"
+    // Game mode is solid everywhere: no glass to blur behind.
+    readonly property string surfaceStyle: SettingsService.gameMode ? "classic" : SettingsService.surfaceStyle
+    readonly property bool solid: !root.seeThrough(root.surfaceStyle)
+    readonly property bool glass: root.seeThrough(root.surfaceStyle)
+
+    // Both glasses let the screen through; only classic does not.
+    function seeThrough(style: string): bool {
+        return style === "glass" || style === "liquid"
+    }
 
     readonly property color island: "#000000"
     readonly property color islandGround: root.groundOf(root.surfaceStyle)
@@ -45,28 +53,46 @@ QtObject {
     readonly property color terminalGround: Qt.rgba(root.accent.r * root.terminalTint,
         root.accent.g * root.terminalTint, root.accent.b * root.terminalTint, root.terminalOpacity)
 
+    // The liquid ground: a light, cool frost rather than the accent's tint,
+    // so the blurred wallpaper reads through it in its own colours.
+    // Dense enough that muted text holds over a light wallpaper: at half
+    // alpha the island over a pale one measured mid grey.
+    readonly property color liquidGround: Qt.rgba(0.06, 0.07, 0.09, 0.66)
+
     // Any style's ground and rim, for a picture of one that is not chosen.
     function groundOf(style: string): color {
-        return style === "glass" ? root.terminalGround : root.island
+        return style === "liquid" ? root.liquidGround
+            : style === "glass" ? root.terminalGround : root.island
     }
 
+    // A ground at a fraction of its own opacity: the Background slider's,
+    // which thins the glass the way it thins the black.
+    function groundAt(style: string, fraction: real): color {
+        const ground = root.groundOf(style)
+        return Qt.rgba(ground.r, ground.g, ground.b, ground.a * fraction)
+    }
+
+    // Liquid's own rim is only a trace: its light is `litRim`, drawn by the
+    // sheen from one side.
     function rimOf(style: string): color {
-        return style === "glass" ? Qt.rgba(1, 1, 1, 0.20) : "#262626"
+        return style === "liquid" ? Qt.rgba(1, 1, 1, 0.08)
+            : style === "glass" ? Qt.rgba(1, 1, 1, 0.20) : "#262626"
     }
     readonly property color islandSurface: "#141414"
     readonly property color islandSurfaceHover: "#1f1f1f"
     readonly property color islandBorder: "#262626"
 
-    // The desk's widgets have a ground of their own, or the bar's
-    // (`SettingsService.desktopGround`, empty to follow).
-    readonly property string deskStyle: SettingsService.desktopGround || root.surfaceStyle
-    readonly property bool deskSolid: root.deskStyle !== "glass"
-    readonly property bool deskGlass: root.deskStyle === "glass"
+    // The desk's widgets have a ground of their own
+    // (`SettingsService.desktopGround`; empty, from an old file, follows).
+    readonly property string deskStyle: SettingsService.gameMode ? "classic"
+        : SettingsService.desktopGround || root.surfaceStyle
+    readonly property bool deskSolid: !root.seeThrough(root.deskStyle)
+    readonly property bool deskGlass: root.seeThrough(root.deskStyle)
 
     // The dock's, the same way (`SettingsService.dockGround`).
-    readonly property string dockStyle: SettingsService.dockGround || root.surfaceStyle
-    readonly property bool dockSolid: root.dockStyle !== "glass"
-    readonly property bool dockGlass: root.dockStyle === "glass"
+    readonly property string dockStyle: SettingsService.gameMode ? "classic"
+        : SettingsService.dockGround || root.surfaceStyle
+    readonly property bool dockGlass: root.seeThrough(root.dockStyle)
 
     // The same three on glass: white veils, by style. Only the bar's and the
     // desk's windows are glass, each in its own style (a `glassy` window
@@ -74,19 +100,23 @@ QtObject {
     // everything else — the settings, the lock — stays black, so a part
     // drawn in both asks by its window (`surfaceIn`).
     function veilOf(style: string): color {
-        return style === "glass" ? Qt.rgba(1, 1, 1, 0.08) : root.islandSurface
+        return style === "liquid" ? Qt.rgba(1, 1, 1, 0.07)
+            : style === "glass" ? Qt.rgba(1, 1, 1, 0.08) : root.islandSurface
     }
 
     function veilHoverOf(style: string): color {
-        return style === "glass" ? Qt.rgba(1, 1, 1, 0.14) : root.islandSurfaceHover
+        return style === "liquid" ? Qt.rgba(1, 1, 1, 0.13)
+            : style === "glass" ? Qt.rgba(1, 1, 1, 0.14) : root.islandSurfaceHover
     }
 
     function veilLineOf(style: string): color {
-        return style === "glass" ? Qt.rgba(1, 1, 1, 0.12) : root.islandBorder
+        return style === "liquid" ? Qt.rgba(1, 1, 1, 0.18)
+            : style === "glass" ? Qt.rgba(1, 1, 1, 0.12) : root.islandBorder
     }
 
     function styleIn(window: var): string {
-        return !!window && window.glassy === true ? (window.groundStyle ?? root.surfaceStyle) : "classic"
+        return !!window && window.glassy === true && !SettingsService.gameMode
+            ? (window.groundStyle ?? root.surfaceStyle) : "classic"
     }
 
     function surfaceIn(window: var): color {
@@ -115,6 +145,40 @@ QtObject {
     // rim, and falling from the top edge.
     readonly property real glassEdge: 0.12
     readonly property color glassSheen: Qt.rgba(1, 1, 1, 0.10)
+
+    // The same, by style: liquid catches more of it, from one side.
+    function edgeOf(style: string): real {
+        return style === "liquid" ? 0.72 : root.glassEdge
+    }
+
+    // Liquid is lit from one side (`LitEdge`): its rim and thick edge are full
+    // at the top-left and bottom-right corners and fade to `litTrace` toward
+    // the other two.
+    function litOf(style: string): bool {
+        return style === "liquid"
+    }
+
+    readonly property real litRim: 0.88
+    readonly property real litTrace: 0.06
+
+    function sheenOf(style: string): color {
+        return style === "liquid" ? Qt.rgba(1, 1, 1, 0.20) : root.glassSheen
+    }
+
+    // An application's icon, from the set `shell.qml` names. Some apps are
+    // drawn there under another name, and every file manager as somebody
+    // else's, so those ask for the picture meant for them.
+    readonly property var appIconAliases: ({
+        "vesktop": "Vesktop",
+        "org.gnome.Nautilus": "impasto-files",
+        "thunar": "impasto-files",
+        "org.xfce.thunar": "impasto-files"
+    })
+
+    function appIcon(name: string): string {
+        return Quickshell.iconPath(root.appIconAliases[name] ?? name, true)
+    }
+
     // How far down a shape that light reaches, in pixels, so a short pane and
     // a tall one are lit alike; a shape shorter than this keeps some at its
     // foot.
@@ -127,7 +191,15 @@ QtObject {
     property color surfaceHover: "#202020"
     property color border: "#282828"
     property color text: "#ffffff"
-    property color textMuted: "#8e8e93"
+    property color paletteMuted: "#8e8e93"
+    // The palette's muted grey, lifted toward the text while any ground is
+    // liquid: over a pale wallpaper that glass measures mid grey, where the
+    // palette's own grey is under 2:1.
+    readonly property color textMuted: root.litOf(root.surfaceStyle)
+            || root.litOf(root.dockStyle) || root.litOf(root.deskStyle)
+        ? Qt.tint(root.paletteMuted, Qt.alpha(root.text, root.mutedLift))
+        : root.paletteMuted
+    readonly property real mutedLift: 0.45
     property color accent: "#0a84ff"
     property color accentHover: "#409cff"
     property color accentText: "#ffffff"
@@ -152,6 +224,14 @@ QtObject {
     readonly property color privacyMicrophone: "#ff9f0a"
     readonly property color privacyCamera: root.indicatorGood
     readonly property color privacyScreen: "#0a84ff"
+
+    // One coat per pet species. Fixed, so a pet looks the same on every
+    // wallpaper and palette.
+    readonly property color petDot: "#cba6f7"
+    readonly property color petSprout: "#a6e3a1"
+    readonly property color petEmber: "#f38ba8"
+    readonly property color petSol: "#f9e2af"
+    readonly property color petDrift: "#89b4fa"
 
     // Ground and ink over photographs. Fixed, since the ground is always dark.
     readonly property color scrim: "#bf000000"
@@ -183,6 +263,23 @@ QtObject {
         "#26292e", "#0e4429", "#006d32", "#26a641", "#39d353"
     ]
 
+    // Ranked groups in a chart, as steps of the accent: one hue, so no two
+    // groups collide whatever the palette. Everything past them is `text` at
+    // `rankRest`.
+    readonly property var rankShades: [1, 0.62, 0.4, 0.24]
+    readonly property real rankRest: 0.14
+
+    function rankColor(rank: int): color {
+        return root.rankColorIn(rank, root.accent, root.text)
+    }
+
+    // The same steps off another accent and text, a widget's `ink`.
+    function rankColorIn(rank: int, accent: color, text: color): color {
+        return rank >= 0 && rank < root.rankShades.length
+            ? Qt.rgba(accent.r, accent.g, accent.b, root.rankShades[rank])
+            : Qt.rgba(text.r, text.g, text.b, root.rankRest)
+    }
+
     readonly property int paletteTransition: 260
 
     Behavior on background   { ColorAnimation { duration: root.paletteTransition } }
@@ -190,7 +287,7 @@ QtObject {
     Behavior on surfaceHover { ColorAnimation { duration: root.paletteTransition } }
     Behavior on border       { ColorAnimation { duration: root.paletteTransition } }
     Behavior on text         { ColorAnimation { duration: root.paletteTransition } }
-    Behavior on textMuted    { ColorAnimation { duration: root.paletteTransition } }
+    Behavior on paletteMuted { ColorAnimation { duration: root.paletteTransition } }
     Behavior on accent       { ColorAnimation { duration: root.paletteTransition } }
     Behavior on accentHover  { ColorAnimation { duration: root.paletteTransition } }
     Behavior on accentText   { ColorAnimation { duration: root.paletteTransition } }
@@ -290,7 +387,8 @@ QtObject {
     //
     // Everything scales off the icon size. The margin matches `gaps_out`.
     readonly property int dockIcon: SettingsService.dockIconSize
-    readonly property int dockPadding: 11
+    // Little room round the icons, so the icon is most of the dock.
+    readonly property int dockPadding: 6
     readonly property int dockGap: root.capsuleSpacing
     readonly property int dockMargin: root.desktopGutter
 
@@ -298,7 +396,11 @@ QtObject {
     // padding on the screen-edge side. An icon is drawn `dockInset` inside its
     // square, so the dot clears both it and the rim.
     readonly property int dockDot: 4
-    readonly property int dockInset: 2
+    readonly property int dockInset: 1
+
+    // The launcher button is a glyph narrower than an icon, so its square is
+    // too: the mark with room either side, or it reads as a gap.
+    readonly property int dockLauncher: Math.round(root.dockIcon * 0.7)
     readonly property int dockThickness: root.dockIcon + 2 * root.dockPadding
 
     // Screen-edge strip a hidden dock still listens on.
@@ -311,12 +413,19 @@ QtObject {
 
     readonly property int dockRadius: root.desktopRadius
 
-    // Hover scale. Small enough that neighbours never move, which keeps the
-    // input region computable.
+    // Hover scale when the dock does not magnify. Small enough that the
+    // neighbours never move.
     readonly property real dockLift: 1.125
+
+    // Magnifying, the icon under the pointer grows to this, and the swell
+    // falls off over this many icons either side.
+    readonly property real dockMagnify: 1.7
+    readonly property real dockReach: 2.5
 
     // Matches Hyprland's `rounding`: widgets sit among windows.
     readonly property int desktopRadius: 22
+    // The screen's own corners, when they are rounded: the same curve.
+    readonly property int screenRadius: root.desktopRadius
 
     readonly property int radiusSmall: 8
     readonly property int radiusMedium: 12
@@ -436,6 +545,11 @@ QtObject {
     // nothing loops while it is on.
     readonly property real motion: SettingsService.gameMode ? 0 : SettingsService.motionScale / 100
     readonly property bool lively: !SettingsService.gameMode
+    // The shell's own shadows are blurred on the GPU, so game mode drops them
+    // with the compositor's; the settings come back when it is off.
+    readonly property bool barShadowShown: SettingsService.barShadow && !SettingsService.gameMode
+    readonly property bool dockShadowShown: SettingsService.dockShadow && !SettingsService.gameMode
+    readonly property bool widgetShadowShown: SettingsService.widgetShadow && !SettingsService.gameMode
 
     readonly property var easingCurves: [
         { id: "OutCubic", label: "Smooth",  type: Easing.OutCubic },
@@ -495,7 +609,7 @@ QtObject {
             root.activeName = name
         for (const token of root.tokens) {
             if (colors[token])
-                root[token] = colors[token]
+                root[token === "textMuted" ? "paletteMuted" : token] = colors[token]
         }
     }
 }

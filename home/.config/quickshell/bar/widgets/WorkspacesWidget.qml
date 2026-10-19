@@ -43,8 +43,8 @@ Rectangle {
     readonly property bool written: ["numbers", "roman", "kanji", "greek"]
         .indexOf(root.style) >= 0
 
-    // The strip is about the screen it is drawn on: the ten are shared, and
-    // this says which of them this screen is showing. Off a screen of its own
+    // The strip is about the screen it is drawn on: which workspace it is
+    // showing and, per screen, which ten are its own. Off a screen of its own
     // it falls back to the focused one.
     readonly property string screenName: root.QsWindow.window?.screen?.name ?? ""
     readonly property int activeId: root.preview ? 2
@@ -83,7 +83,7 @@ Rectangle {
     }
 
     function isShown(n: int): bool {
-        return root.preview ? n <= 5 : HyprlandService.isVisible(n)
+        return root.preview ? n <= 5 : HyprlandService.isVisibleOn(n, root.screenName)
     }
 
     function isOccupied(n: int): bool {
@@ -143,7 +143,7 @@ Rectangle {
         Repeater {
             id: repeater
 
-            model: root.preview ? 5 : HyprlandService.maximum
+            model: root.preview ? 5 : HyprlandService.span
 
             Item {
                 id: slot
@@ -241,7 +241,8 @@ Rectangle {
 
                     visible: root.written
                     anchors.centerIn: parent
-                    text: root.written ? root.glyphOf(slot.workspaceId) : ""
+                    text: root.written ? root.glyphOf(root.preview ? slot.workspaceId
+                        : HyprlandService.numberOn(slot.workspaceId, root.screenName)) : ""
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeSmall
                     font.weight: Font.DemiBold

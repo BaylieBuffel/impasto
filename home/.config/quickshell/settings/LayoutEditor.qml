@@ -63,7 +63,7 @@ Item {
         root.catalogueIds.map(id => ({ id: id, shape: "", figure: "", when: "" }))
 
     readonly property string barStyle: SettingsService.barStyle
-    readonly property bool unified: root.barStyle === "island"
+    readonly property bool unified: root.barStyle === "island" || root.barStyle === "bezel"
     // No capsules round the sides: in one capsule the band is their ground,
     // and bare they sit on the wallpaper.
     readonly property bool chromeless: root.unified || SettingsService.barSides === "bare"

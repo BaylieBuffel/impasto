@@ -182,7 +182,7 @@ FocusScope {
                         anchors.fill: parent
                         radius: width / 2
                         color: day.chosen ? Theme.accent
-                            : (hover.hovered ? Theme.surfaceHoverIn(QsWindow.window) : "transparent")
+                            : (hover.hovered ? Theme.surfaceHoverIn(QsWindow.window) : Qt.alpha(Theme.surfaceHoverIn(QsWindow.window), 0))
                         border.color: day.isToday && !day.chosen ? Theme.accent : "transparent"
                         border.width: 1
 

@@ -59,7 +59,7 @@ Rectangle {
             return root.lit ? Theme.islandGroundLit : Theme.islandGround
         if (root.lit)
             return Theme.islandSurfaceHover
-        return SettingsService.islandAttached ? Theme.islandGround : Theme.islandSurface
+        return SettingsService.notched ? Theme.islandGround : Theme.islandSurface
     }
 
     // ── HOSTED ──────────────────────────────────────────────────────────────
@@ -74,7 +74,7 @@ Rectangle {
     // default, so an island without a bar gets the size it asks for.
     property int roomForPanel: 100000
 
-    readonly property int overviewRows: Math.ceil(SettingsService.workspaceMax / 5)
+    readonly property int overviewRows: Math.ceil(HyprlandService.maximum / 5)
 
     // ── PANEL SIZES ─────────────────────────────────────────────────────────
     //
@@ -99,6 +99,10 @@ Rectangle {
         // A program asking for root (`PolkitService`).
         auth:       { width: 460,  height: 236 },
         machines:   { width: 860,  height: 580 },
+        // A row per server, from two to six before it scrolls.
+        servers:    { width: ServersService.panelWidth, height: ServersService.panelHeight },
+        screentime: { width: 940,  height: 614 },
+        camera:     { width: CameraService.panelWidth, height: CameraService.panelHeight },
         // A row per creature, plus one for the next egg.
         pet:        { width: 560,  height: 205 + 62 * PetService.family.length },
         // The shelf of cards, or the game being played at its own size.
@@ -127,7 +131,8 @@ Rectangle {
     readonly property var panelSize:
         root.panelSizes[islandState.openPanel] ?? root.panelSizes.controls
 
-    // Only the overview is ever wide enough to hit the limit.
+    // The bar's limit: the whole bar, or a spread bar's room between its
+    // sides, which hide instead for a panel wider than that (`Bar.crowded`).
     readonly property int panelWidth: Math.min(root.panelSize.width, root.roomForPanel)
     readonly property int panelHeight: root.panelSize.height
 
@@ -153,7 +158,7 @@ Rectangle {
 
     // Attached, only the shape reaches up to the screen edge; the contents keep
     // their padding, so nothing already drawn moves.
-    readonly property int notchPad: SettingsService.islandAttached ? Theme.barTopMargin : 0
+    readonly property int notchPad: SettingsService.notched ? Theme.barTopMargin : 0
 
     readonly property var layerComponents: ({
         modules: restLayer,
@@ -178,6 +183,9 @@ Rectangle {
         session: sessionPanel,
         auth: authPanel,
         machines: machinesPanel,
+        servers: serversPanel,
+        screentime: screenTimePanel,
+        camera: cameraPanel,
         pet: petPanel,
         games: gamesPanel,
         notes: notesPanel,
@@ -208,7 +216,7 @@ Rectangle {
     GlassSheen {
         shape: root
         visible: Theme.glass && !root.paper && !root.hosted
-        edges: !SettingsService.islandAttached
+        edges: !SettingsService.notched
     }
 
     IslandState {
@@ -352,13 +360,13 @@ Rectangle {
     // edge. `Bar.qml` draws the outline over both. Attached, `Bar.qml` draws
     // it too, down the fillets and open along the screen edge.
     readonly property bool inBand: root.hosted
-    border.width: root.paper || root.inBand || SettingsService.islandAttached ? 0 : 1
+    border.width: root.paper || root.inBand || SettingsService.notched ? 0 : 1
     clip: true
 
     // Attached, the upper corners go square: the curve is added outside the
     // island by NotchFillet, flaring away from it rather than cutting into it.
-    topLeftRadius: SettingsService.islandAttached ? 0 : root.radius
-    topRightRadius: SettingsService.islandAttached ? 0 : root.radius
+    topLeftRadius: SettingsService.notched ? 0 : root.radius
+    topRightRadius: SettingsService.notched ? 0 : root.radius
 
     Behavior on topLeftRadius {
         enabled: root.animated
@@ -633,6 +641,21 @@ Rectangle {
     Component {
         id: machinesPanel
         MachinesPanel { onClosed: root.close() }
+    }
+
+    Component {
+        id: serversPanel
+        ServersPanel { onClosed: root.close() }
+    }
+
+    Component {
+        id: screenTimePanel
+        ScreenTimePanel { onClosed: root.close() }
+    }
+
+    Component {
+        id: cameraPanel
+        CameraPanel { onClosed: root.close() }
     }
 
     Component {

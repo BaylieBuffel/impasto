@@ -40,7 +40,8 @@ Item {
     readonly property var barPhrases: ({
         grouped: Tr.t("Grouped bar"),
         spread: Tr.t("Spread bar"),
-        island: Tr.t("One island")
+        island: Tr.t("One island"),
+        bezel: Tr.t("Bezel")
     })
 
     readonly property var dockPhrases: ({

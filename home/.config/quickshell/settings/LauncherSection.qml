@@ -168,16 +168,6 @@ SettingsSection {
                 }
             }
         }
-
-    }
-
-    // The dock's kept list, editable here as well because it leads this one.
-    SettingGroup {
-        visible: root.tab === "results"
-        title: Tr.t("Kept applications")
-        note: Tr.t("They lead the list, and the dock keeps them too.")
-
-        KeptApplications {}
     }
 
     // ── SIGILS ──────────────────────────────────────────────────────────────

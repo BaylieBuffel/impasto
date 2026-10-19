@@ -26,7 +26,7 @@ Item {
     // island itself stays.
     property real held: 1
 
-    readonly property bool attached: SettingsService.islandAttached
+    readonly property bool attached: SettingsService.notched
     readonly property int notchPad: root.attached ? Theme.barTopMargin : 0
 
     readonly property bool scanning: LockService.faceScanning

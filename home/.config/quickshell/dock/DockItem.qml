@@ -16,8 +16,8 @@ import "../services"
 // One application on the dock: the icon and a running dot. The position comes
 // from DockService, so the name label can use the same arithmetic.
 //
-// Hovering lifts the icon slightly instead of magnifying it: magnification
-// shifts the neighbours and moves the target.
+// Magnifying, the icon swells with its neighbours as the dock works out
+// (`Dock.qml`); otherwise hovering lifts it slightly and nothing else moves.
 Item {
     id: root
 
@@ -30,7 +30,6 @@ Item {
     readonly property string key: root.modelData.key
     readonly property bool running: root.modelData.running
     readonly property bool active: root.modelData.active
-    readonly property bool multiple: root.modelData.windows.length > 1
 
     readonly property bool vertical: DockService.vertical
     readonly property string edge: DockService.edge
@@ -45,7 +44,9 @@ Item {
     // the request goes up to the dock.
     signal menuRequested(string key)
 
-    readonly property real along: DockService.offsetOf(DockService.shifted(root.index))
+    readonly property int slot: root.index + (DockService.hasLauncher ? 1 : 0)
+    readonly property real along: root.capsule.alongOf(root.slot,
+        DockService.offsetOf(DockService.shifted(root.index)))
 
     width: Theme.dockIcon
     height: Theme.dockIcon
@@ -73,12 +74,12 @@ Item {
     // Animates the neighbours making room, and the held icon returning when the
     // drop changes nothing.
     Behavior on x {
-        enabled: !drag.active
+        enabled: !drag.active && root.capsule.swell === 0
         NumberAnimation { duration: Theme.durationMedium; easing.type: Theme.easing }
     }
 
     Behavior on y {
-        enabled: !drag.active
+        enabled: !drag.active && root.capsule.swell === 0
         NumberAnimation { duration: Theme.durationMedium; easing.type: Theme.easing }
     }
 
@@ -90,9 +91,13 @@ Item {
         width: Theme.dockIcon
         height: Theme.dockIcon
 
-        scale: root.hovered || root.held ? Theme.dockLift : 1
+        scale: SettingsService.dockMagnify
+            ? root.capsule.scaleOf(root.slot)
+            : (root.hovered || root.held ? Theme.dockLift : 1)
+        transformOrigin: SettingsService.dockMagnify ? root.capsule.growFrom : Item.Center
 
         Behavior on scale {
+            enabled: !SettingsService.dockMagnify
             NumberAnimation { duration: Theme.durationFast; easing.type: Theme.easing }
         }
 
@@ -102,7 +107,7 @@ Item {
             anchors.margins: -3
             radius: Theme.radiusMedium
             color: Theme.veilHoverOf(Theme.dockStyle)
-            opacity: root.hovered || root.held ? 1 : 0
+            opacity: (root.hovered || root.held) && !SettingsService.dockMagnify ? 1 : 0
             visible: opacity > 0
 
             Behavior on opacity {
@@ -113,7 +118,7 @@ Item {
         // The desktop entry's icon from the icon theme, falling back to the
         // launcher mark when it is missing.
         readonly property string iconSource: root.modelData.icon
-            ? Quickshell.iconPath(root.modelData.icon, true) : ""
+            ? Theme.appIcon(root.modelData.icon) : ""
 
         Image {
             id: picture
@@ -140,15 +145,17 @@ Item {
 
     // ── RUNNING INDICATOR ───────────────────────────────────────────────────
     //
-    // One window is a dot, several a longer one. The accent for the focused
-    // application, muted when it is running but not focused.
-    Rectangle {
-        readonly property real reach: root.multiple ? Theme.dockDot * 2.8 : Theme.dockDot
+    // A dot per window, up to three, so the count reads at a glance. The
+    // accent for the focused application, muted when it is running but not
+    // focused.
+    Grid {
+        id: dots
 
-        width: root.vertical ? Theme.dockDot : reach
-        height: root.vertical ? reach : Theme.dockDot
-        radius: Theme.radiusPill
-        color: root.active ? Theme.accent : Theme.textMuted
+        readonly property int shown: Math.min(3, root.modelData.windows.length)
+
+        rows: root.vertical ? dots.shown : 1
+        columns: root.vertical ? 1 : dots.shown
+        spacing: Theme.dockDot - 1
 
         // Centred between the drawn icon and the rim on the screen-edge side.
         readonly property real room: Theme.dockPadding + Theme.dockInset
@@ -169,18 +176,33 @@ Item {
             NumberAnimation { duration: Theme.durationMedium; easing.type: Theme.easing }
         }
 
-        Behavior on width {
-            NumberAnimation { duration: Theme.durationFast; easing.type: Theme.easing }
-        }
+        Repeater {
+            model: dots.shown
 
-        Behavior on height {
-            NumberAnimation { duration: Theme.durationFast; easing.type: Theme.easing }
-        }
+            Rectangle {
+                width: Theme.dockDot
+                height: Theme.dockDot
+                radius: Theme.radiusPill
+                color: root.active ? Theme.accent : Theme.textMuted
 
-        Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+                Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+            }
+        }
     }
 
     // ── INPUT ───────────────────────────────────────────────────────────────
+
+    // The grown icon and half the gap either side answer the pointer, so
+    // swollen icons leave no dead space between them.
+    containmentMask: Item {
+        readonly property real span: Theme.dockIcon * slot.scale + Theme.dockGap
+
+        parent: root
+        x: root.vertical ? -Theme.dockPadding : (root.width - span) / 2
+        y: root.vertical ? (root.height - span) / 2 : -Theme.dockPadding
+        width: root.vertical ? Theme.dockThickness : span
+        height: root.vertical ? span : Theme.dockThickness
+    }
 
     HoverHandler {
         id: hover

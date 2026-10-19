@@ -30,11 +30,11 @@ Singleton {
     readonly property alias barHeight: config.barHeight
     readonly property alias barMargin: config.barMargin
     readonly property alias islandAttached: config.islandAttached
-    readonly property alias barFullWidth: config.barFullWidth
     readonly property alias barSideMargin: config.barSideMargin
     readonly property alias barStyle: config.barStyle
     readonly property alias barEverywhere: config.barEverywhere
     readonly property alias barHidden: config.barHidden
+    readonly property alias screenCorners: config.screenCorners
     readonly property alias gameMode: config.gameMode
     readonly property alias barLeft: config.barLeft
     readonly property alias barRight: config.barRight
@@ -58,19 +58,25 @@ Singleton {
     readonly property alias dockEdge: config.dockEdge
     readonly property alias dockAlignment: config.dockAlignment
     readonly property alias dockIconSize: config.dockIconSize
+    readonly property alias dockMagnify: config.dockMagnify
     readonly property alias dockOpacity: config.dockOpacity
     readonly property alias dockGround: config.dockGround
+    readonly property alias terminalGround: config.terminalGround
     readonly property alias dockRunning: config.dockRunning
     readonly property alias dockEverywhere: config.dockEverywhere
     readonly property alias dockAutohide: config.dockAutohide
     readonly property alias dockLauncher: config.dockLauncher
     readonly property alias weatherPlace: config.weatherPlace
     readonly property alias githubUser: config.githubUser
+    readonly property alias markets: config.markets
     readonly property alias petStyle: config.petStyle
     readonly property alias launcherResults: config.launcherResults
     readonly property alias launcherOrder: config.launcherOrder
     readonly property alias launcherFits: config.launcherFits
     readonly property alias emojiTone: config.emojiTone
+    readonly property alias cameraEnabled: config.cameraEnabled
+    readonly property alias cameraEffect: config.cameraEffect
+    readonly property alias cameraReactions: config.cameraReactions
     readonly property alias clipboardHistory: config.clipboardHistory
     readonly property alias clipboardKeep: config.clipboardKeep
     readonly property alias clipboardImages: config.clipboardImages
@@ -90,12 +96,14 @@ Singleton {
     readonly property alias spectrumOnEmpty: config.spectrumOnEmpty
     readonly property alias workspaceCount: config.workspaceCount
     readonly property alias workspaceMax: config.workspaceMax
+    readonly property alias workspaceMode: config.workspaceMode
     readonly property alias workspaceStyle: config.workspaceStyle
     readonly property alias motionScale: config.motionScale
     readonly property alias motionCurve: config.motionCurve
     readonly property alias animationPreset: config.animationPreset
     readonly property alias windowShadow: config.windowShadow
     readonly property alias barShadow: config.barShadow
+    readonly property alias dockShadow: config.dockShadow
     readonly property alias widgetShadow: config.widgetShadow
     readonly property alias windowGlass: config.windowGlass
     readonly property alias surfaceStyle: config.surfaceStyle
@@ -161,8 +169,13 @@ Singleton {
     readonly property var barStyles: [
         { id: "grouped", label: "Grouped",    note: "The workspaces, the island and the modules together in the middle." },
         { id: "spread",  label: "Spread",     note: "The workspaces at one edge, the modules at the other, the island between them." },
-        { id: "island",  label: "One island", note: "Everything inside a single capsule." }
+        { id: "island",  label: "One island", note: "Everything inside a single capsule." },
+        { id: "bezel",   label: "Bezel",      note: "A band across the whole top edge, with the island dropping out of its middle." }
     ]
+
+    // The island is cut into the top edge: chosen, or the bezel, which is
+    // always cut in.
+    readonly property bool notched: config.islandAttached || config.barStyle === "bezel"
 
     // Used while `barLeft`/`barRight` are null. `workspaces` is the strip,
     // `tray` the applications' icons and `split` starts a new capsule; none is
@@ -327,11 +340,12 @@ Singleton {
     // the person: kept across switches, left out of exports and untouched by
     // Reset. The recorder and capture entries are last-used state.
     readonly property var machineKeys: [
-        "displays", "lidPolicy",
-        "userName", "userAvatar", "language", "keyboard", "weatherPlace", "githubUser",
+        "displays", "lidPolicy", "workspaceMode",
+        "userName", "userAvatar", "language", "keyboard", "weatherPlace", "githubUser", "markets",
         "emojiTone",
         "doNotDisturb", "nightLight", "nightTemperature", "barHidden", "desktopHidden",
         "gameMode",
+        "cameraEnabled", "cameraEffect", "cameraReactions",
         "recorderAudio", "captureShape", "captureKind"
     ]
 
@@ -454,10 +468,20 @@ Singleton {
         onLoaded: {
             root.arrived = true
             root.welcomeActivities()
-            // A ground named "frosted" is read as glass.
+            // A ground named "frosted" is read as glass, and an empty one,
+            // which followed the bar's, takes the bar's.
             for (const key of ["surfaceStyle", "desktopGround", "dockGround"])
                 if (config[key] === "frosted")
                     config[key] = "glass"
+            for (const key of ["desktopGround", "dockGround"])
+                if (config[key] === "")
+                    config[key] = config.surfaceStyle
+            // The dock shared the bar's shadow before it had its own.
+            if (!/"dockShadow"/.test(file.text()))
+                config.dockShadow = config.barShadow
+            // One island spanning the screen is the bezel now.
+            if (/"barFullWidth":\s*true/.test(file.text()) && config.barStyle === "island")
+                config.barStyle = "bezel"
         }
         // First run: write the defaults, which then count as read.
         onLoadFailed: error => {
@@ -496,11 +520,6 @@ Singleton {
         // A notch flush with the top edge instead of a floating capsule.
         property bool islandAttached: false
 
-        // One-island style only: the band spans the screen (less
-        // `barSideMargin`) instead of fitting its contents. Off by default so
-        // the island can still grow and shrink.
-        property bool barFullWidth: false
-
         property int barSideMargin: 18
 
         // A bar on every screen, or only on the one being worked on. The
@@ -511,27 +530,31 @@ Singleton {
         // island still comes down for what it has to show.
         property bool barHidden: false
 
+        // Every screen's four corners rounded off in black.
+        property bool screenCorners: false
+
         // Game mode: no animations, blur, shadow or glass on the compositor,
         // over whatever the rest of the settings say.
         property bool gameMode: false
 
-        // Three shadows, one per layer: Hyprland's under the windows, the
-        // shell's under the bar and the dock, and under the desk's widgets.
+        // Four shadows, one per layer: Hyprland's under the windows, the
+        // shell's under the bar, the dock and the desk's widgets.
         property bool windowShadow: false
         property bool barShadow: false
+        property bool dockShadow: false
         property bool widgetShadow: false
 
         // hyprglass. Dimmed in the settings when the plugin is not built;
         // `CompositorService` pushes it at login and after every reload.
         property bool windowGlass: false
 
-        // The island's and the bar's ground: "classic" solid black, or
-        // "glass", the terminal's ground over the compositor's blur
-        // (`Theme.islandGround`).
+        // The island's and the bar's ground: "classic" solid black,
+        // "glass", the terminal's ground over the compositor's blur, or
+        // "liquid", a clear frost over it (`Theme.islandGround`).
         property string surfaceStyle: "classic"
 
-        // The desktop widgets' ground, as above, or "" for the bar's.
-        property string desktopGround: ""
+        // The desktop widgets' ground, as above.
+        property string desktopGround: "classic"
 
         // The bar's sides: "capsule", each group in a capsule, or "bare",
         // the icons on the wallpaper. The one-capsule style has its band.
@@ -584,6 +607,17 @@ Singleton {
         // Skin tone for emoji that have one: 0 is the default yellow, 1 to 5
         // light to dark. The person's, so it stays with the machine.
         property int emojiTone: 0
+
+        // ── CAMERA ──────────────────────────────────────────────────
+        //
+        // Off takes the virtual camera away from every program.
+        property bool cameraEnabled: true
+
+        // One of `CameraService.effects`.
+        property string cameraEffect: "natural"
+
+        // The gestures that set off a reaction, by `CameraService.reactions` id.
+        property var cameraReactions: ["thumbsup", "heart", "peace", "thumbsdown", "horns", "ok"]
 
         // ── CLIPBOARD ───────────────────────────────────────────────
         //
@@ -641,6 +675,9 @@ Singleton {
         // past `workspaceCount` still show while occupied.
         property int workspaceCount: 5
         property int workspaceMax: 10
+        // `shared`: every screen shares the same workspaces. `screen`: each
+        // has ten of its own, the main screen 1–10 and the rest after it.
+        property string workspaceMode: "shared"
         // How the strip draws each workspace: a shape (`dots`, `bars`, `rings`)
         // or its number written out (`numbers`, `roman`, `kanji`, `greek`).
         property string workspaceStyle: "dots"
@@ -806,11 +843,17 @@ Singleton {
         // Every other dock metric derives from the icon size.
         property int dockIconSize: 44
 
+        // The icons swell under the pointer and the neighbours make room.
+        property bool dockMagnify: true
+
         // Percent; the compositor blurs behind the layer.
         property int dockOpacity: 100
 
-        // The capsule's ground, as `surfaceStyle`, or "" for the bar's.
-        property string dockGround: ""
+        // The capsule's ground, as `surfaceStyle`.
+        property string dockGround: "classic"
+
+        // kitty's ground, as `surfaceStyle`.
+        property string terminalGround: "glass"
 
         // Also show running applications that aren't pinned.
         property bool dockRunning: true
@@ -829,6 +872,10 @@ Singleton {
 
         // GitHub user for the contributions widget; empty draws nothing.
         property string githubUser: ""
+
+        // The markets widget's pairs, BASE/QUOTE or a coin alone (in US
+        // dollars), separated by commas.
+        property string markets: "BTC, ETH, EUR/USD"
 
         // One of `PetService.styles`: how the pet is drawn, everywhere it is
         // drawn.

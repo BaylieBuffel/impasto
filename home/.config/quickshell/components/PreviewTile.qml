@@ -38,8 +38,10 @@ Rectangle {
     Layout.fillWidth: true
     Layout.preferredWidth: 1
     radius: Theme.radiusMedium
-    color: root.selected ? Theme.surfaceHoverIn(QsWindow.window)
-        : (mouse.containsMouse ? Theme.surfaceIn(QsWindow.window) : "transparent")
+    // Hovered takes the selected tile's fill, and the accent rim is what
+    // still tells the chosen one apart.
+    color: root.selected || mouse.containsMouse ? Theme.surfaceHoverIn(QsWindow.window)
+        : Qt.alpha(Theme.surfaceHoverIn(QsWindow.window), 0)
     border.color: root.selected ? Theme.accent
         : (mouse.containsMouse ? Theme.borderIn(QsWindow.window) : Theme.surfaceHoverIn(QsWindow.window))
     border.width: 1

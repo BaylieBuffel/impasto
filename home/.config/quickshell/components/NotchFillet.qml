@@ -89,7 +89,7 @@ Item {
         y1: 0
         x2: 0
         y2: root.sheenReach
-        GradientStop { position: 0; color: Theme.glassSheen }
+        GradientStop { position: 0; color: Theme.sheenOf(Theme.surfaceStyle) }
         GradientStop { position: 1; color: "transparent" }
     }
 }

@@ -17,9 +17,10 @@ import "../components"
 // The card shown while arranging: every module as its real face at the
 // smallest family it offers, which is the face it lands with. Drag one onto
 // the grid, or click it to place it on the first free cell, and change its
-// shape there; drop a widget on the card to remove it. Every module is offered
-// regardless of its current state. Notes and the spectrum also land on an
-// edge when let go against one.
+// shape there; while anything is carried the card steps aside for a strip
+// along the bottom, and a widget dropped on it is removed. Every module is
+// offered regardless of its current state. Notes and the spectrum also land
+// on an edge when let go against one.
 //
 // The ghost (the face at full size while dragged) lives on the board rather
 // than here, so it can leave the card.
@@ -53,7 +54,13 @@ EditTray {
     onMoved: (x, y) => DesktopService.setGalleryAt(root.screenName, x, y)
     size: DesktopService.gallerySize
     onResized: (columns, rows) => DesktopService.gallerySize = { columns: columns, rows: rows }
-    receiving: DesktopService.dragging !== "" && DesktopService.landing === null
+    receiving: root.stowed && DesktopService.landing === null && DeckService.receiving === ""
+
+    // Out of the way while anything on the desk is carried, the strip
+    // standing in for it.
+    stowed: root.pulling !== "" || DesktopService.dragging !== "" || DeckService.dragging !== ""
+    zoneParent: root.board
+    dropLabel: root.pulling !== "" ? Tr.t("Drop here to leave it out") : Tr.t("Drop here to take it off")
 
     function smallest(id: string): string {
         return DesktopService.familiesFor(id)[0] ?? "4x2"
@@ -67,15 +74,15 @@ EditTray {
         when: root.holding || root.pulling !== ""
     }
 
-    // The card's rect in board coordinates, so a drop can tell whether it
-    // landed there. This item fills the board.
+    // The card's rect in board coordinates, or the strip's while it is
+    // stowed, so a drop can tell whether it landed there. This item fills
+    // the board.
     Binding {
         target: DesktopService
         property: "trayBox"
-        value: ({
-            x: root.card.x, y: root.card.y,
-            width: root.card.width, height: root.card.height
-        })
+        value: root.stowed
+            ? ({ x: root.zone.x, y: root.zone.y, width: root.zone.width, height: root.zone.height })
+            : ({ x: root.card.x, y: root.card.y, width: root.card.width, height: root.card.height })
     }
 
     // Dragged onto another screen, this card is destroyed and that board

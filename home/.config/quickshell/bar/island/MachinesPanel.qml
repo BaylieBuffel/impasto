@@ -207,28 +207,26 @@ ColumnLayout {
         Layout.preferredHeight: 44
         spacing: 12
 
-        Column {
+        // What is running and what it takes, where New has its field.
+        Text {
+            visible: root.view === "machines"
+            text: "󰍹"
+            font.family: Theme.fontMono
+            font.pixelSize: 17
+            color: Theme.accent
+        }
+
+        Text {
             Layout.fillWidth: true
             visible: root.view === "machines"
-            spacing: 2
-
-            Text {
-                text: Tr.t("Machines")
-                font.family: Theme.fontFamily
-                font.pixelSize: 20
-                font.weight: Font.Bold
-                color: Theme.text
-            }
-
-            Text {
-                text: VmService.running.length === 0 ? Tr.t("None running")
-                    : `${VmService.running.length} ${Tr.t("running")} · `
-                      + `${VmService.coresInUse} / ${VmService.hostCores} ${Tr.t("cores")} · `
-                      + `${VmService.memoryInUse} / ${Math.round(VmService.hostMemory / 1073741824)} GB`
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-                color: Theme.textMuted
-            }
+            elide: Text.ElideRight
+            text: VmService.running.length === 0 ? Tr.t("None running")
+                : `${VmService.running.length} ${Tr.t("running")} · `
+                  + `${VmService.coresInUse} / ${VmService.hostCores} ${Tr.t("cores")} · `
+                  + `${VmService.memoryInUse} / ${Math.round(VmService.hostMemory / 1073741824)} GB`
+            font.family: Theme.fontFamily
+            font.pixelSize: 16
+            color: VmService.running.length === 0 ? Theme.textMuted : Theme.text
         }
 
         Text {
@@ -688,7 +686,7 @@ ColumnLayout {
                 width: catalogList.width
                 height: 44
                 radius: 14
-                color: system.current ? Theme.islandSurfaceHover : systemPress.containsMouse ? Theme.islandSurface : "transparent"
+                color: system.current ? Theme.islandSurfaceHover : systemPress.containsMouse ? Theme.islandSurface : Qt.alpha(Theme.islandSurface, 0)
                 border.width: system.current ? 1 : 0
                 border.color: Theme.accent
 

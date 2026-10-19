@@ -12,7 +12,7 @@
 
 return {
     terminal     = "kitty",
-    file_manager = "thunar",
+    file_manager = "nautilus --new-window",
 
     -- The system default browser.
     browser      = [[gtk-launch "$(xdg-settings get default-web-browser)"]],

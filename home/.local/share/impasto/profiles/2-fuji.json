@@ -88,7 +88,7 @@
     "dockAutohide": false,
     "dockPinned": [
       "kitty.desktop",
-      "thunar.desktop"
+      "org.gnome.Nautilus.desktop"
     ],
     "greeting": "koi",
     "wallpaperTransition": "circle",
@@ -173,6 +173,9 @@
       "Shell · Turn game mode on or off": "SUPER + SHIFT + G",
       "Shell · Open the packages": "SUPER + I",
       "Shell · Open the virtual machines": "SUPER + SHIFT + M",
+      "Shell · Open the development servers": "SUPER + O",
+      "Shell · Open the screen time": "SUPER + Y",
+      "Shell · Open the camera effects": "SUPER + SHIFT + W",
       "Shell · Open the clipboard history": "SUPER + V",
       "Shell · Pick an emoji": "SUPER + period",
       "Shell · Pick a colour off the screen": "SUPER + SHIFT + C",

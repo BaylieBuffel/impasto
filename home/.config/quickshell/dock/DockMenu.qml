@@ -88,6 +88,7 @@ Item {
 
         GlassSheen {
             shape: ground
+            style: Theme.dockStyle
             visible: Theme.dockGlass
         }
     }
@@ -115,7 +116,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Theme.dockMenuRow
                 radius: Theme.radiusSmall
-                color: windowMouse.containsMouse ? Theme.veilHoverOf(Theme.dockStyle) : "transparent"
+                color: windowMouse.containsMouse ? Theme.veilHoverOf(Theme.dockStyle) : Qt.alpha(Theme.veilHoverOf(Theme.dockStyle), 0)
 
                 Behavior on color { ColorAnimation { duration: Theme.durationFast } }
 
@@ -192,7 +193,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Theme.dockMenuRow
                 radius: Theme.radiusSmall
-                color: actionMouse.containsMouse ? Theme.veilHoverOf(Theme.dockStyle) : "transparent"
+                color: actionMouse.containsMouse ? Theme.veilHoverOf(Theme.dockStyle) : Qt.alpha(Theme.veilHoverOf(Theme.dockStyle), 0)
 
                 Behavior on color { ColorAnimation { duration: Theme.durationFast } }
 

@@ -14,7 +14,8 @@ import "../theme"
 // Laid over a ground in the glass style (`Theme.glass`) and under what is on
 // it: the thick edge of a pane — light caught just inside the rim, fading in
 // over a few pixels — and light falling from the top. Takes its parent's
-// corners, since `clip` would cut it square.
+// corners, since `clip` would cut it square. Liquid's edge is lit from one
+// side (`LitEdge`).
 Item {
     id: root
 
@@ -22,9 +23,11 @@ Item {
     // Off where the ground runs on past its own rectangle (the attached
     // notch), whose edge follows the fillets instead (`NotchOutline`).
     property bool edges: true
+    // Whose glass: the bar's unless the dock or the desk hands in its own.
+    property string style: Theme.surfaceStyle
 
     anchors.fill: parent
-    visible: Theme.glass
+    visible: Theme.seeThrough(root.style)
 
     component Band: Rectangle {
         required property int inset
@@ -34,7 +37,7 @@ Item {
         anchors.margins: inset
         color: "transparent"
         border.width: 1
-        border.color: Qt.rgba(1, 1, 1, Theme.glassEdge * strength)
+        border.color: Qt.rgba(1, 1, 1, Theme.edgeOf(root.style) * strength)
         radius: Math.max(0, root.shape.radius - inset)
         topLeftRadius: Math.max(0, root.shape.topLeftRadius - inset)
         topRightRadius: Math.max(0, root.shape.topRightRadius - inset)
@@ -54,17 +57,33 @@ Item {
         readonly property real span: Theme.glassSheenDepth / Math.max(1, height)
 
         gradient: Gradient {
-            GradientStop { position: 0; color: Theme.glassSheen }
+            GradientStop { position: 0; color: Theme.sheenOf(root.style) }
             GradientStop {
                 position: Math.min(1, sheen.span)
-                color: Qt.rgba(1, 1, 1, Theme.glassSheen.a * Math.max(0, 1 - 1 / sheen.span))
+                color: Qt.rgba(1, 1, 1, Theme.sheenOf(root.style).a * Math.max(0, 1 - 1 / sheen.span))
             }
         }
     }
 
-    Item {
+    LitEdge {
         anchors.fill: parent
+        style: root.style
         visible: root.edges
+
+        // A style lit from one side draws its rim's light here, where it
+        // can fade with the rest.
+        Rectangle {
+            anchors.fill: parent
+            visible: Theme.litOf(root.style)
+            color: "transparent"
+            border.width: 1
+            border.color: Qt.rgba(1, 1, 1, Theme.litRim)
+            radius: root.shape.radius
+            topLeftRadius: root.shape.topLeftRadius
+            topRightRadius: root.shape.topRightRadius
+            bottomLeftRadius: root.shape.bottomLeftRadius
+            bottomRightRadius: root.shape.bottomRightRadius
+        }
 
         Band { inset: 1; strength: 1 }
         Band { inset: 2; strength: 0.6 }

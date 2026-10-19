@@ -33,6 +33,7 @@ import "../components"
 // raises the widgets.
 PanelWindow {
     id: root
+    CornerGuard {}
 
     readonly property bool editing: DesktopService.editing
 
@@ -327,6 +328,7 @@ PanelWindow {
     // show the windows through a half-drawn wallpaper.
     PanelWindow {
         id: backdropWindow
+        CornerGuard {}
 
         screen: root.screen
 
@@ -402,6 +404,7 @@ PanelWindow {
 
         PanelWindow {
             id: menuWindow
+            CornerGuard {}
 
             readonly property var menu: root.menu
             readonly property var row: menu && menu.key !== "" ? DesktopService.entryOf(menu.key) : null

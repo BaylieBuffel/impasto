@@ -44,21 +44,20 @@ Item {
     //
     // One row per page. `keywords` are extra search terms beyond the label.
     readonly property var sections: [
-        { id: "bar", category: "shell", icon: "󰧨", label: Tr.t("Bar & Island"),
-          blurb: Tr.t("The top bar, the island and notifications."),
-          tabs: [{ id: "island", label: Tr.t("The island") },
-                 { id: "modules", label: Tr.t("The bar") },
-                 { id: "workspaces", label: Tr.t("Workspaces") },
-                 { id: "notifications", label: Tr.t("Notifications") }],
-          keywords: "bar island notch height margin width full span workspaces unified layout island bar band notification toast do not disturb silence timeout clock time date seconds format beside running modules layout left right split drag catalogue chip icon ring figure hover shape media claude battery timer volume brightness network wifi bluetooth weather stats cpu updates pet capture record screenshot buttons every screen monitors ground glass classic blur transparent translucent codex lyrics lrclib song",
+        { id: "bar", category: "shell", icon: "󰧨", label: Tr.t("Bar"),
+          blurb: Tr.t("How the top bar is drawn, what it carries and its workspaces."),
+          tabs: [{ id: "style", label: Tr.t("Style") },
+                 { id: "layout", label: Tr.t("Layout") },
+                 { id: "workspaces", label: Tr.t("Workspaces") }],
+          keywords: "bar style grouped spread one capsule bezel frame rounded corners screen sides capsules wallpaper every screen monitors height margin scale ground glass classic liquid shadow layout left right split drag catalogue chip icon ring figure hover shape modules media claude battery timer volume brightness network wifi bluetooth weather stats cpu updates pet capture record screenshot buttons workspaces strip shown available shared per screen",
           page: barPage },
 
-        { id: "widgets", category: "shell", icon: "󰕮", label: Tr.t("Desktop"),
-          blurb: Tr.t("What sits on the wallpaper, under the windows."),
-          tabs: [{ id: "modules", label: Tr.t("Module settings") },
-                 { id: "widgets", label: Tr.t("The widgets") }],
-          keywords: "widgets desktop wallpaper widget place drag size shape capsule ground glass classic blur palette ink tray edit arrange clock calendar notes note sticky theme analogue modern opacity weather location place city github contributions username handwriting edges deck pet creature plush paper pixel egg species style spectrum cava visualiser visualizer bars audio music lyrics song",
-          page: widgetsPage },
+        { id: "island", category: "shell", icon: "󰌢", label: Tr.t("Island"),
+          blurb: Tr.t("The island at rest, what runs beside the time, and notifications."),
+          tabs: [{ id: "island", label: Tr.t("The island") },
+                 { id: "notifications", label: Tr.t("Notifications") }],
+          keywords: "island notch floating glance hover clock time date seconds format beside running activities privacy microphone camera recording virtual machines workspace notification notifications toast do not disturb silence timeout history clear",
+          page: islandPage },
 
         { id: "controls", category: "shell", icon: "󰕰", label: Tr.t("Control Centre"),
           blurb: Tr.t("What the island opens onto when you click it."),
@@ -66,43 +65,60 @@ Item {
           keywords: "controls control centre center panel doors buttons row pet games notes board tasks kanban stats blocks grid toggles tiles arrange edit tray wifi bluetooth airplane microphone focus",
           page: controlsPage },
 
-        { id: "dock", category: "shell", icon: "󱂩", label: Tr.t("Dock"),
-          blurb: Tr.t("The dock and the applications kept on it."),
-          tabs: [],
-          keywords: "dock apps applications launcher pinned kept favourite favorite running edge bottom left right align icon size autohide taskbar menu windows close every screen monitors",
-          page: dockPage },
-
         { id: "launcher", category: "shell", icon: "󰍉", label: Tr.t("Launcher"),
           blurb: Tr.t("Search, sigils and the clipboard history."),
           tabs: [{ id: "results", label: Tr.t("Results") },
                  { id: "sigils", label: Tr.t("Sigils") },
                  { id: "clipboard", label: Tr.t("Clipboard") }],
-          keywords: "launcher search apps results calculate run window timer note task board prefix sigil order recent frequency favourite favorite pinned kept clipboard history copy paste images wipe lock",
+          keywords: "launcher search apps results calculate run window timer note task board prefix sigil order recent frequency clipboard history copy paste images wipe lock",
           page: launcherPage },
 
+        { id: "dock", category: "shell", icon: "󱂩", label: Tr.t("Dock"),
+          blurb: Tr.t("The dock and the applications kept on it."),
+          tabs: [],
+          keywords: "dock apps applications launcher pinned kept favourite favorite running edge bottom left right align icon size magnify ground glass classic liquid background opacity shadow autohide taskbar menu windows close every screen monitors",
+          page: dockPage },
+
+        { id: "widgets", category: "shell", icon: "󰕮", label: Tr.t("Desktop"),
+          blurb: Tr.t("What sits on the wallpaper, under the windows."),
+          tabs: [],
+          keywords: "widgets desktop wallpaper widget place drag size shape arrange edit tray face theme analogue modern sticker ground glass classic liquid background opacity shadow edges deck notes spectrum empty workspace",
+          page: widgetsPage },
+
+        { id: "modules", category: "shell", icon: "󰆧", label: Tr.t("Modules"),
+          blurb: Tr.t("What the modules know, on the bar, the desktop and the panels."),
+          tabs: [],
+          keywords: "modules weather location place city github contributions username markets crypto bitcoin price currency exchange rate pet creature plush paper pixel egg species style lyrics lrclib song music notes note handwriting",
+          page: modulesPage },
+
         { id: "appearance", category: "desk", icon: "󰏘", label: Tr.t("Appearance"),
-          blurb: Tr.t("Palette, windows, fonts and animations."),
-          tabs: [{ id: "theme", label: Tr.t("Theme") },
-                 { id: "windows", label: Tr.t("Windows") },
-                 { id: "depth", label: Tr.t("Depth") },
+          blurb: Tr.t("Wallpaper, terminal, fonts and the shell's motion."),
+          tabs: [{ id: "wallpaper", label: Tr.t("Wallpaper") },
+                 { id: "terminal", label: Tr.t("Terminal") },
                  { id: "type", label: Tr.t("Type") },
                  { id: "motion", label: Tr.t("Motion") }],
-          keywords: "appearance theme colour color wallpaper transition fade wipe wave circle random greeting fastfetch fa terminal scene lava lamp critters koi invaders shadow shadows depth ground glass classic rounding blur gaps border opacity glass rules font family sans mono nerd icons typeface animation speed curve easing preset motion game mode performance window layout dwindle master scrolling",
+          keywords: "appearance theme colour color palette wallpaper transition fade wipe wave circle random terminal kitty ground glass greeting fastfetch fa scene lava lamp critters koi invaders font family sans mono nerd icons typeface animation speed pace curve easing motion game mode performance",
           page: appearancePage },
+
+        { id: "windows", category: "desk", icon: "󰖯", label: Tr.t("Windows"),
+          blurb: Tr.t("How Hyprland lays out, draws and animates windows."),
+          tabs: [],
+          keywords: "windows layout dwindle master scrolling rounding border gaps inner outer opacity inactive blur refraction glass hyprglass shadow animation preset hyprland",
+          page: windowsPage },
 
         { id: "monitors", category: "desk", icon: "󰍹", label: Tr.t("Displays"),
           blurb: Tr.t("Screen layout, modes and the laptop lid."),
           tabs: [{ id: "arrangement", label: Tr.t("Arrangement") },
                  { id: "screen", label: Tr.t("The screen") },
                  { id: "lid", label: Tr.t("The lid") }],
-          keywords: "displays monitor screen resolution refresh scale rotate transform vrr mirror extend primary lid clamshell laptop close workspaces",
+          keywords: "displays monitor screen resolution refresh scale rotate transform vrr mirror extend primary lid clamshell laptop close",
           page: monitorsPage },
 
         { id: "input", category: "desk", icon: "󰍽", label: Tr.t("Input"),
           blurb: Tr.t("The keyboard, the pointer and the cursor."),
           tabs: [{ id: "keyboard", label: Tr.t("Keyboard") },
                  { id: "pointer", label: Tr.t("Pointer") }],
-          keywords: "input keyboard layout repeat mouse sensitivity pointer cursor size theme shake find",
+          keywords: "input keyboard layout repeat mouse sensitivity pointer cursor size colour color shake find",
           page: inputPage },
 
         { id: "keys", category: "desk", icon: "󰌌", label: Tr.t("Keys"),
@@ -110,19 +126,21 @@ Item {
           tabs: [{ id: "shell", label: Tr.t("The shell's own") },
                  { id: "compositor", label: Tr.t("The compositor's") },
                  { id: "custom", label: Tr.t("The ones you add") }],
-          keywords: "keys shortcut binding hotkey super rebind unbind add remove custom command run action added",
+          keywords: "keys shortcut shortcuts binding hotkey super rebind unbind add remove custom command run action added zen hide widgets",
           page: keysPage },
 
         { id: "session", category: "session", icon: "󰌾", label: Tr.t("Session"),
-          blurb: Tr.t("Your account, the lock screen and idle behaviour."),
+          blurb: Tr.t("Your account, the lock screen, face unlock and idle behaviour."),
           tabs: [{ id: "lock", label: Tr.t("Lock screen") },
+                 { id: "face", label: Tr.t("Face unlock") },
                  { id: "idle", label: Tr.t("When you leave") }],
           keywords: "session lock blur password suspend security idle timeout sleep screen off dpms away never lock after avatar picture name account clock stacked inline flip face unlock howdy camera infrared enrol enroll scan faces recognise music song lyrics cover now playing",
           page: sessionPage },
 
         { id: "system", category: "session", icon: "󰍛", label: Tr.t("System"),
-          blurb: Tr.t("Profiles, language, this machine and reset."),
+          blurb: Tr.t("Profiles, updates, language and this machine."),
           tabs: [{ id: "profiles", label: Tr.t("Profiles") },
+                 { id: "updates", label: Tr.t("Updates") },
                  { id: "machine", label: Tr.t("This machine") }],
           keywords: "system about version update updates upgrade changelog commits cpu memory uptime reset defaults language spanish english profile profiles switch rename duplicate delete import export backup file json changed files edited deleted restore wallpapers .new config dotfiles keep mine",
           page: systemPage }
@@ -135,19 +153,20 @@ Item {
     readonly property string guideRoot: "https://andreumassanet.github.io/impasto-docs/"
     readonly property var guides: ({
         "bar": "shell/bar/",
-        "bar/island": "shell/island/#settings",
-        "bar/modules": "shell/bar/#arranging",
+        "bar/layout": "shell/bar/#arranging",
         "bar/workspaces": "shell/bar/#size-and-workspaces",
-        "bar/notifications": "shell/island/#notifications",
-        "widgets": "shell/desktop/",
-        "widgets/widgets": "shell/desktop/#arranging",
+        "island": "shell/island/#settings",
+        "island/notifications": "shell/island/#notifications",
+        "widgets": "shell/desktop/#arranging",
+        "modules": "shell/desktop/",
         "controls": "shell/control-centre/#arranging",
         "dock": "shell/dock/#settings",
         "launcher": "shell/launcher/#settings",
         "launcher/sigils": "shell/launcher/#modes",
         "launcher/clipboard": "shell/launcher/#the-clipboard",
         "appearance": "shell/settings/#the-pages",
-        "appearance/theme": "theming/palettes/",
+        "appearance/wallpaper": "theming/palettes/",
+        "windows": "shell/settings/#the-pages",
         "monitors": "shell/displays/",
         "monitors/arrangement": "shell/displays/#arrangement",
         "monitors/screen": "shell/displays/#the-screen",
@@ -168,7 +187,7 @@ Item {
     //
     // A history rather than a single id, so a page that links to another can
     // be left with the back button.
-    property var trail: [{ section: "bar", tab: "island" }]
+    property var trail: [{ section: "bar", tab: "style" }]
     property int cursor: 0
 
     readonly property string section: root.trail[root.cursor].section
@@ -413,7 +432,7 @@ Item {
                             anchors.fill: parent
                             radius: Theme.radiusSmall
                             color: entry.active ? Theme.islandSurfaceHover
-                                : (entryMouse.containsMouse ? Theme.island : "transparent")
+                                : (entryMouse.containsMouse ? Theme.island : Qt.alpha(Theme.island, 0))
                             border.color: entry.active ? Theme.accent : "transparent"
                             border.width: 1
 
@@ -555,9 +574,11 @@ Item {
     }
 
     Component { id: barPage;        BarSection {} }
+    Component { id: islandPage;     IslandSection {} }
     // Widgets are arranged on the desktop itself, behind this window.
     Component { id: widgetsPage;    WidgetsSection {
         onArranging: root.closed() } }
+    Component { id: modulesPage;    ModulesSection {} }
     // Open the control centre before closing, while this panel still exists
     // to emit the request.
     Component { id: controlsPage;   ControlsSection {
@@ -569,6 +590,7 @@ Item {
     Component { id: launcherPage;   LauncherSection {} }
     Component { id: appearancePage; AppearanceSection {
         onPanelRequested: name => root.panelRequested(name) } }
+    Component { id: windowsPage;    WindowsSection {} }
     Component { id: inputPage;      InputSection {} }
     Component { id: monitorsPage;   MonitorsSection {} }
     Component { id: keysPage;       KeysSection {} }

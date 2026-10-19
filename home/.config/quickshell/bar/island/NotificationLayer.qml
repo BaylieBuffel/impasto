@@ -40,17 +40,14 @@ Item {
         const n = root.notification
         if (!n)
             return ""
-        const named = n.appIcon || n.desktopEntry || ""
-        if (named === "")
-            return ""
-        if (named.startsWith("/"))
-            return `file://${named}`
-        if (named.includes("://"))
-            return named
-        return Quickshell.iconPath(named, true)
+        return NotificationService.iconOf(n.appIcon || n.desktopEntry || "", n.appName ?? "")
     }
 
     readonly property string picture: root.notification ? (root.notification.image ?? "") : ""
+
+    // For a sender with no icon of its own: the icon set's notifications
+    // icon, or its alert for a critical one.
+    readonly property string standIn: NotificationService.standIn(root.critical)
 
     // ── THE ROW ─────────────────────────────────────────────────────────────
 
@@ -73,8 +70,9 @@ Item {
             }
         }
 
-        // The picture: the sender's, else the app's icon, else the bell. A
-        // critical notification is ringed in the warning hue.
+        // The picture: the sender's, else the app's icon, else the icon set's
+        // notifications icon, else the bell. A critical notification is ringed
+        // in the warning hue.
         Item {
             id: face
 
@@ -108,7 +106,7 @@ Item {
                     anchors.centerIn: parent
                     width: parent.width * 0.62
                     height: width
-                    source: photo.visible ? "" : root.appIcon
+                    source: photo.visible ? "" : (root.appIcon || root.standIn)
                     visible: !photo.visible && status === Image.Ready
                     asynchronous: true
                     sourceSize.width: 64

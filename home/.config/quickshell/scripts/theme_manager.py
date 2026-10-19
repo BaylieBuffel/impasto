@@ -29,7 +29,7 @@ import shutil
 import subprocess
 import sys
 import textwrap
-from xml.sax.saxutils import escape
+from urllib.parse import quote
 
 # Sibling module with the greeting's pixel-art scenes.
 import greeting
@@ -50,6 +50,7 @@ STATE_FILE = os.path.join(STATE_DIR, "state.json")
 TERMINAL_PALETTE_FILE = os.path.join(STATE_DIR, "kitty-palette.conf")
 # Separate from the palette fragment, which is rewritten whole on every push.
 TERMINAL_FONT_FILE = os.path.join(STATE_DIR, "kitty-font.conf")
+TERMINAL_GROUND_FILE = os.path.join(STATE_DIR, "kitty-ground.conf")
 
 # kitty appends `-<pid>` to `listen_on`, so this globs every running
 # instance. Reaching none is fine: new terminals read the fragment anyway.
@@ -65,6 +66,17 @@ TERMINAL_TINT = 0.22
 
 # What kitty.conf falls back to when nothing has been pushed yet.
 TERMINAL_BACKGROUND_FALLBACK = "#000000"
+
+
+# The terminal's ground, named as the shell's: classic is opaque black, glass
+# the tinted ground at kitty.conf's opacity, liquid a neutral smoke thinner
+# than glass so the wallpaper comes through in its own colours. A background
+# of None keeps the palette's tinted one.
+TERMINAL_GROUNDS = {
+    "classic": ("#000000", 1.0),
+    "glass": (None, 0.90),
+    "liquid": ("#0f1217", 0.72),
+}
 
 
 def terminal_background(colors):
@@ -111,10 +123,6 @@ GTK_MIN_CONTRAST = 4.5
 GTK_TINT_DARK = 0.18
 GTK_TINT_LIGHT = 0.07
 GTK_LIGHT_ABOVE = 0.5
-
-# Thunar's inactive split pane (theme_unfocused_bg_color): halfway from the
-# ground to the surface, visible without reading as a toolbar.
-GTK_DIM = 0.5
 
 # ── FOLDER ICONS ────────────────────────────────────────────────────────────
 #
@@ -722,6 +730,66 @@ def push_terminal_palette(colors):
             # A stale socket from a closed terminal is normal; keep going.
             sys.stderr.write(f"{os.path.basename(socket_path)}: "
                              f"{result.stderr.strip()}\n")
+            continue
+        # The palette carries the tinted background; a ground with its own
+        # puts it back over it.
+        background = ground_background()
+        if background:
+            subprocess.run(
+                [kitten, "@", "--to", f"unix:{socket_path}", "set-colors", "--all",
+                 "--configured", f"background={background}"],
+                capture_output=True, text=True)
+
+
+def ground_background():
+    """The background the chosen ground sets, or None for the palette's."""
+    try:
+        with open(TERMINAL_GROUND_FILE, encoding="utf-8") as handle:
+            for line in handle:
+                if line.startswith("background "):
+                    return line.split()[1]
+    except OSError:
+        pass
+    return None
+
+
+def push_terminal_ground(style):
+    """Write the ground fragment and give it to running terminals.
+
+    The opacity reaches an open window only if it was started with
+    dynamic_background_opacity, which kitty.conf sets.
+    """
+    background, opacity = TERMINAL_GROUNDS.get(style, TERMINAL_GROUNDS["glass"])
+
+    ensure_state_dir()
+    with open(TERMINAL_GROUND_FILE, "w", encoding="utf-8") as handle:
+        handle.write("# Written by theme_manager.py; edits here are lost.\n")
+        handle.write(f"# The terminal's ground: {style}.\n")
+        handle.write(f"background_opacity {opacity:.2f}\n")
+        if background:
+            handle.write(f"background {background}\n")
+
+    kitten = shutil.which("kitten")
+    if not kitten:
+        sys.stderr.write("kitten not found; the ground applies to new terminals only\n")
+        return
+
+    for socket_path in sorted(glob.glob(KITTY_SOCKETS)):
+        target = ["--to", f"unix:{socket_path}"]
+        result = subprocess.run(
+            [kitten, "@", *target, "set-background-opacity", "--all", f"{opacity:.2f}"],
+            capture_output=True, text=True)
+        if result.returncode != 0:
+            # A stale socket from a closed terminal is normal; keep going.
+            sys.stderr.write(f"{os.path.basename(socket_path)}: "
+                             f"{result.stderr.strip()}\n")
+            continue
+        # Back to the palette's tinted background, or over it with the
+        # ground's own.
+        colors = [f"background={background}"] if background else [TERMINAL_PALETTE_FILE]
+        subprocess.run(
+            [kitten, "@", *target, "set-colors", "--all", "--configured", *colors],
+            capture_output=True, text=True)
 
 
 def write_greetings(colors):
@@ -1279,9 +1347,6 @@ def build_gtk3_css(colors):
     # The accent as text, lifted against the ground as in GTK4.
     accent_text = lift(accent, GTK_MIN_CONTRAST, ground)
 
-    # Thunar's inactive split pane (see GTK_DIM).
-    dim = mix(ground, raised, GTK_DIM)
-
     pairs = [
         ("theme_bg_color", ground), ("theme_fg_color", text),
         ("theme_base_color", ground), ("theme_text_color", text),
@@ -1289,9 +1354,9 @@ def build_gtk3_css(colors):
         ("theme_selected_fg_color", on_accent),
         ("insensitive_bg_color", ground), ("insensitive_fg_color", muted),
         ("insensitive_base_color", ground),
-        ("theme_unfocused_bg_color", dim),
+        ("theme_unfocused_bg_color", ground),
         ("theme_unfocused_fg_color", muted),
-        ("theme_unfocused_base_color", dim),
+        ("theme_unfocused_base_color", ground),
         ("theme_unfocused_text_color", text),
         ("theme_unfocused_selected_bg_color", accent),
         ("theme_unfocused_selected_fg_color", on_accent),
@@ -1432,17 +1497,6 @@ scrollbar slider {{ background-color: @insensitive_fg_color; }}
 scrollbar slider:hover {{ background-color: @theme_fg_color; }}
 
 statusbar {{ border-top: 1px solid @borders; }}
-
-/* ── THUNAR ──────────────────────────────────────────────────────────── */
-/* · Thunar's location bar is not a GtkToolbar and has no class to style, so
-     the view and the side pane draw the dividing line under it instead */
-.standard-view, .shortcuts-pane, .tree-pane {{
-  border-top: 1px solid @borders;
-}}
-
-/* · this one Thunar paints itself, from a named colour, so all it needs is
-     for the name to mean something */
-.split-view-inactive-pane .view {{ background-color: {dim}; }}
 """)
     lines.append("")
     return "\n".join(lines)
@@ -3491,176 +3545,101 @@ def write_vscodium_settings(colors):
     return True
 
 
-# ── THUNAR ──────────────────────────────────────────────────────────────────
+# ── FILE MANAGER ────────────────────────────────────────────────────────────
 #
-# Thunar's colours come from gtk.css; this is everything else, applied by
-# `./setup thunar` with Thunar closed. Thunar keeps its settings in xfconf
-# (the XML under ~/.config/xfce4/ is xfconfd's cache and gets rewritten), and
-# it rewrites uca.xml when its custom-actions dialog is used, so neither can
-# be a file in home/.
-THUNAR_CHANNEL = "thunar"
-THUNAR_CONFIG_DIR = os.path.join(XDG_CONFIG_HOME, "Thunar")
-THUNAR_ACTIONS_FILE = os.path.join(THUNAR_CONFIG_DIR, "uca.xml")
+# Nautilus's colours come from gtk.css and its right-click menu is a
+# nautilus-python extension in home/; this is everything else, applied by
+# `./setup nautilus`. Its preferences live in gsettings, and its sidebar is
+# GTK's bookmarks file, which the user edits from the sidebar itself.
+NAUTILUS_BOOKMARKS_FILE = os.path.join(XDG_CONFIG_HOME, "gtk-3.0", "bookmarks")
 
-# Toolbar items in order. The menu bar is hidden, so the menu button is shown.
-# Every item must be listed, shown or not: Thunar appends missing ones at the
-# end.
-THUNAR_TOOLBAR = (
-    "back:1", "forward:1", "open-parent:1", "open-home:1",
-    "location-bar:1", "reload:1", "search:1",
-    "view-switcher:1", "toggle-split-view:1", "menu:1",
-    "new-tab:0", "new-window:0", "undo:0", "redo:0",
-    "zoom-out:0", "zoom-in:0", "zoom-reset:0",
-    "view-as-icons:0", "view-as-detailed-list:0", "view-as-compact-list:0",
+# (schema, key, value) for `gsettings set`. Only preferences: what Nautilus
+# remembers (window size, zoom, sort column) is left alone.
+NAUTILUS_SETTINGS = (
+    ("org.gtk.gtk4.Settings.FileChooser", "show-hidden", "false"),
+    ("org.gtk.gtk4.Settings.FileChooser", "sort-directories-first", "true"),
+    ("org.gnome.nautilus.preferences", "show-delete-permanently", "true"),
+    ("org.gnome.nautilus.preferences", "show-create-link", "true"),
 )
 
-# (property, type, value) for `xfconf-query --create`. Only preferences: state
-# Thunar remembers (window size, sort column, pane position) is left alone.
-THUNAR_SETTINGS = (
-    # · toolbar: one bar, with the menu behind its menu button
-    ("/last-menubar-visible", "bool", "false"),
-    ("/last-statusbar-visible", "bool", "true"),
-    ("/last-toolbar-visible-buttons", "string", ",".join(THUNAR_TOOLBAR)),
-    ("/misc-small-toolbar-icons", "bool", "false"),
-    # No client-side decorations: Hyprland has no title bar to replace, and
-    # the CSD shadow margin would count towards the window's size.
-    ("/misc-use-csd", "bool", "false"),
-
-    # · display
-    ("/misc-thumbnail-mode", "string", "THUNAR_THUMBNAIL_MODE_ONLY_LOCAL"),
-    ("/misc-thumbnail-draw-frames", "bool", "false"),
-    ("/misc-folders-first", "bool", "true"),
-    ("/misc-case-sensitive", "bool", "false"),
-    ("/misc-expandable-folders", "bool", "true"),
-    ("/misc-folder-item-count", "string", "THUNAR_FOLDER_ITEM_COUNT_ONLY_LOCAL"),
-    ("/misc-file_size_binary", "bool", "true"),
-    ("/misc-date-style", "string", "THUNAR_DATE_STYLE_CUSTOM"),
-    ("/misc-date-custom-style", "string", "%Y-%m-%d %H:%M"),
-    ("/misc-highlighting-enabled", "bool", "true"),
-    ("/misc-image-preview-mode", "string", "THUNAR_IMAGE_PREVIEW_MODE_EMBEDDED"),
-    ("/misc-image-size-in-statusbar", "bool", "true"),
-    ("/shortcuts-icon-emblems", "bool", "true"),
-
-    # · behaviour
-    ("/misc-single-click", "bool", "false"),
-    ("/misc-middle-click-in-tab", "bool", "true"),
-    ("/misc-switch-to-new-tab", "bool", "true"),
-    ("/misc-tab-close-middle-click", "bool", "true"),
-    ("/misc-always-show-tabs", "bool", "false"),
-    ("/misc-vertical-split-pane", "bool", "false"),
-    ("/misc-open-new-windows-in-split-view", "bool", "false"),
-    ("/misc-recursive-search", "string", "THUNAR_RECURSIVE_SEARCH_LOCAL"),
-    ("/misc-ctrl-scroll-wheel-to-zoom", "bool", "true"),
-    ("/misc-horizontal-wheel-navigates", "bool", "true"),
-    ("/misc-window-title-style", "string",
-     "THUNAR_WINDOW_TITLE_STYLE_FOLDER_NAME_WITHOUT_THUNAR_SUFFIX"),
-    ("/misc-full-path-in-tab-title", "bool", "false"),
-    ("/misc-remember-geometry", "bool", "true"),
-    ("/misc-volume-management", "bool", "true"),
-    ("/misc-undo-redo-history-size", "int", "25"),
-
-    # · deleting: offer Shift+Delete, keep the trash confirmation, and open
-    #   shell scripts in an editor instead of running them on double-click
-    ("/misc-show-delete-action", "bool", "true"),
-    ("/misc-confirm-move-to-trash", "bool", "true"),
-    ("/misc-exec-shell-scripts-by-default", "bool", "false"),
-
-    # · copying: partial files and verification only for remote transfers
-    ("/misc-parallel-copy-mode", "string",
-     "THUNAR_PARALLEL_COPY_MODE_ONLY_LOCAL_SAME_DEVICES"),
-    ("/misc-transfer-use-partial", "string", "THUNAR_USE_PARTIAL_MODE_REMOTE"),
-    ("/misc-transfer-verify-file", "string", "THUNAR_VERIFY_FILE_MODE_REMOTE"),
-)
-
-# Right-click actions, each using a program from this repository. %f is one
-# path and %F all the selected ones; Thunar quotes them, so they are not
-# quoted here, and shell commands take the path as an argument.
-THUNAR_ACTIONS = (
-    ("impasto-terminal", "utilities-terminal", "Open Terminal Here",
-     "Open kitty in this folder",
-     "kitty --working-directory %f", ("directories",)),
-    ("impasto-yazi", "folder-open", "Open yazi Here",
-     "Open this folder in yazi",
-     "kitty --working-directory %f yazi", ("directories",)),
-    ("impasto-editor", "accessories-text-editor", "Open in the Editor",
-     "Open in VSCodium",
-     "codium %F", ("directories", "text-files", "other-files")),
-    ("impasto-wallpaper", "preferences-desktop-wallpaper", "Set as Wallpaper",
-     "Use this picture or video as the wallpaper and theme the desktop from it",
-     "qs ipc call wallpaper set %f", ("image-files", "video-files")),
-    ("impasto-copy-path", "edit-copy", "Copy Path",
-     "Copy the full path of the selection to the clipboard",
-     "sh -c 'printf %s \"$1\" | wl-copy' impasto %f",
-     ("directories", "audio-files", "image-files", "other-files",
-      "text-files", "video-files")),
-)
+# The sidebar's folders, as xdg-user-dir names. One already there is kept
+# where it is; the first goes on top when it is added, the rest at the end.
+NAUTILUS_PLACES = ("DESKTOP", "DOCUMENTS", "PICTURES", "DOWNLOAD")
 
 
-def build_thunar_actions():
-    """Thunar's uca.xml, written whole, replacing whatever is there."""
-    lines = ['<?xml version="1.0" encoding="UTF-8"?>',
-             "<!-- Written by theme_manager.py, from `./setup thunar`. -->",
-             "<!-- Anything added here by hand is lost on the next one. -->",
-             "<actions>"]
-    for unique, icon, name, description, command, kinds in THUNAR_ACTIONS:
-        lines += ["<action>",
-                  f"\t<icon>{icon}</icon>",
-                  f"\t<name>{escape(name)}</name>",
-                  "\t<submenu></submenu>",
-                  f"\t<unique-id>{unique}</unique-id>",
-                  f"\t<command>{escape(command)}</command>",
-                  f"\t<description>{escape(description)}</description>",
-                  "\t<range></range>",
-                  "\t<patterns>*</patterns>",
-                  "\t<startup-notify/>"]
-        lines += [f"\t<{kind}/>" for kind in kinds]
-        lines.append("</action>")
-    lines += ["</actions>", ""]
-    return "\n".join(lines)
-
-
-def apply_thunar():
-    """Apply Thunar's settings and custom actions. Returns success.
-
-    A property xfconf refuses is reported and skipped, so older Thunar
-    versions still get the ones they know.
-    """
-    if not shutil.which("thunar"):
-        sys.stderr.write("thunar is not installed\n")
-        return False
-    if not shutil.which("xfconf-query"):
-        sys.stderr.write("xfconf-query is not installed: Thunar keeps its "
-                         "settings in xfconf and there is no file to write\n")
-        return False
-
+def user_dir(name):
+    """An XDG user directory, or None when it is unset or is $HOME."""
     try:
-        os.makedirs(THUNAR_CONFIG_DIR, exist_ok=True)
-        with open(THUNAR_ACTIONS_FILE, "w", encoding="utf-8") as handle:
-            handle.write(build_thunar_actions())
+        path = subprocess.run(["xdg-user-dir", name], capture_output=True,
+                              text=True, timeout=10).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if not path or os.path.realpath(path) == os.path.realpath(os.path.expanduser("~")):
+        return None
+    return path
+
+
+def write_nautilus_bookmarks():
+    """Add the user folders missing from the sidebar. Returns success."""
+    try:
+        with open(NAUTILUS_BOOKMARKS_FILE, encoding="utf-8") as handle:
+            lines = [line.rstrip("\n") for line in handle if line.strip()]
+    except FileNotFoundError:
+        lines = []
     except OSError as error:
-        sys.stderr.write(f"Cannot write {THUNAR_ACTIONS_FILE}: {error}\n")
+        sys.stderr.write(f"Cannot read {NAUTILUS_BOOKMARKS_FILE}: {error}\n")
+        return False
+
+    held = {line.split(" ", 1)[0] for line in lines}
+    added = []
+    for name in NAUTILUS_PLACES:
+        path = user_dir(name)
+        if path and os.path.isdir(path):
+            uri = "file://" + quote(path)
+            if uri not in held:
+                added.append((name, uri))
+    if not added:
+        return True
+
+    first = [uri for name, uri in added if name == NAUTILUS_PLACES[0]]
+    lines = first + lines + [uri for name, uri in added if name != NAUTILUS_PLACES[0]]
+    try:
+        os.makedirs(os.path.dirname(NAUTILUS_BOOKMARKS_FILE), exist_ok=True)
+        with open(NAUTILUS_BOOKMARKS_FILE, "w", encoding="utf-8") as handle:
+            handle.write("\n".join(lines) + "\n")
+    except OSError as error:
+        sys.stderr.write(f"Cannot write {NAUTILUS_BOOKMARKS_FILE}: {error}\n")
+        return False
+    return True
+
+
+def apply_nautilus():
+    """Apply Nautilus's preferences and sidebar. Returns success.
+
+    A key gsettings refuses is reported and skipped, so an older Nautilus
+    still gets the ones it knows.
+    """
+    if not shutil.which("nautilus"):
+        sys.stderr.write("nautilus is not installed\n")
         return False
 
     refused = 0
-    for prop, kind, value in THUNAR_SETTINGS:
-        command = ["xfconf-query", "--channel", THUNAR_CHANNEL,
-                   "--property", prop, "--create", "--type", kind,
-                   "--set", value]
+    for schema, key, value in NAUTILUS_SETTINGS:
         try:
-            result = subprocess.run(command, capture_output=True, text=True,
-                                    timeout=10)
+            result = subprocess.run(["gsettings", "set", schema, key, value],
+                                    capture_output=True, text=True, timeout=10)
         except (OSError, subprocess.SubprocessError) as error:
-            sys.stderr.write(f"{prop}: {error}\n")
+            sys.stderr.write(f"{schema} {key}: {error}\n")
             refused += 1
             continue
         if result.returncode != 0:
-            sys.stderr.write(f"{prop}: {result.stderr.strip()}\n")
+            sys.stderr.write(f"{schema} {key}: {result.stderr.strip()}\n")
             refused += 1
 
     if refused:
-        sys.stderr.write(f"{refused} of {len(THUNAR_SETTINGS)} settings were "
+        sys.stderr.write(f"{refused} of {len(NAUTILUS_SETTINGS)} settings were "
                          f"refused\n")
-    return refused == 0
+    return write_nautilus_bookmarks() and refused == 0
 
 
 # ── BROWSER ─────────────────────────────────────────────────────────────────
@@ -4069,7 +4048,7 @@ def main():
                "set-wallpaper <path> [transition] | "
                "restore | extract-colors [path] | set-theme <id> | "
                "push-terminal-palette <json> | push-terminal-font <family> | "
-               "apply-vscodium [json] | apply-thunar | apply-vesktop")
+               "apply-vscodium [json] | apply-nautilus | apply-vesktop")
     if len(sys.argv) < 2:
         sys.stderr.write(f"Usage: theme_manager.py {actions}\n")
         sys.exit(1)
@@ -4117,12 +4096,14 @@ def main():
         refresh_spotify()
     elif action == "push-terminal-font" and argument:
         push_terminal_font(argument)
+    elif action == "push-terminal-ground" and argument:
+        push_terminal_ground(argument)
     elif action == "apply-vscodium":
         colors = json.loads(argument) if argument else (
             extract_colors(get_current_wallpaper()) or {})
         sys.exit(0 if write_vscodium_settings(colors) else 1)
-    elif action == "apply-thunar":
-        sys.exit(0 if apply_thunar() else 1)
+    elif action == "apply-nautilus":
+        sys.exit(0 if apply_nautilus() else 1)
     elif action == "apply-vesktop":
         sys.exit(0 if tick_vesktop_theme() else 1)
     else:

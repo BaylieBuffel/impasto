@@ -14,6 +14,8 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Notifications
 
+import "../theme"
+
 // Owns org.freedesktop.Notifications. If another daemon holds the name, the
 // server stays unregistered and takes over by itself once it is released.
 //
@@ -23,6 +25,9 @@ Singleton {
     id: root
 
     signal arrived(var notification)
+
+    // Every notification that comes in, shown or not, by the program's name.
+    signal received(string appName)
 
     // For notifications that do not set their own timeout.
     readonly property int defaultTimeout: SettingsService.notificationTimeout
@@ -128,10 +133,37 @@ Singleton {
             summary: notification.summary,
             body: notification.body,
             appName: notification.appName,
+            icon: notification.appIcon || notification.desktopEntry || "",
             image: notification.image,
             urgency: notification.urgency,
             lock: pixels ? root.retainer.createObject(root, { object: notification }) : null
         }
+    }
+
+    // A sender's icon: the icon set's picture for it first, by the name it
+    // gives, its desktop entry or its own name, so a sender handing in its
+    // logo by path, or nothing, still looks like the rest; then that path.
+    // "" when there is none.
+    function iconOf(named: string, appName: string): string {
+        const entry = appName ? DesktopEntries.heuristicLookup(appName) : null
+        for (const name of [named, entry?.icon ?? "", appName.toLowerCase()]) {
+            if (name === "" || name.includes("/"))
+                continue
+            const themed = Theme.appIcon(name)
+            if (themed !== "")
+                return themed
+        }
+        if (named.startsWith("/"))
+            return `file://${named}`
+        if (named.includes("://"))
+            return named
+        return ""
+    }
+
+    // For a sender with no icon of its own: the icon set's notifications
+    // icon, or its alert for a critical one.
+    function standIn(critical: bool): string {
+        return Theme.appIcon(critical ? "com.github.timecraft.notifier" : "cs-notifications")
     }
 
     // The open notification behind a history entry, while it is still open.
@@ -240,6 +272,8 @@ Singleton {
     }
 
     function present(notification: var): void {
+        root.received(notification.appName ?? "")
+
         // A transient notification asks not to be kept.
         if (!notification.transient) {
             root.keep([root.record(notification)]
@@ -321,6 +355,7 @@ Singleton {
             summary: entry.summary,
             body: entry.body,
             appName: entry.appName,
+            icon: entry.icon ?? "",
             image: entry.image.startsWith("image://qsimage/") ? "" : entry.image,
             urgency: entry.urgency
         }))

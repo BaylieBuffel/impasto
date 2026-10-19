@@ -253,7 +253,7 @@ Scope {
 
         readonly property var names: ["launcher", "controls", "overview", "appearance", "palette",
             "stats", "session", "pet", "games", "notes", "board", "keys", "packages",
-            "machines", "wifi", "bluetooth", "sound", "microphone", "brightness", "nightlight"]
+            "machines", "servers", "screentime", "camera", "wifi", "bluetooth", "sound", "microphone", "brightness", "nightlight"]
 
         function open(name: string): string {
             if (names.indexOf(name) < 0)
@@ -497,7 +497,7 @@ Scope {
     IpcHandler {
         target: "wallpaper"
 
-        // Kept as it was: Thunar's "Set as Wallpaper" calls it.
+        // Kept as it was: the file manager's "Set as Wallpaper" calls it.
         function set(path: string): string {
             if (!path)
                 return "usage: qs ipc call wallpaper set <path>"

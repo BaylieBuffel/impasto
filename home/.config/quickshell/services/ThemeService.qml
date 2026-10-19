@@ -93,10 +93,26 @@ QtObject {
 
     readonly property Process fontProcess: Process {}
 
+    // ── GROUND ──────────────────────────────────────────────────────────────
+    //
+    // The terminal's ground, chosen beside the shell's.
+    readonly property string terminalGround: SettingsService.terminalGround
+
+    onTerminalGroundChanged: root.pushTerminalGround()
+
+    function pushTerminalGround(): void {
+        root.groundProcess.command = [root.script, "push-terminal-ground",
+                                      SettingsService.terminalGround]
+        root.groundProcess.running = true
+    }
+
+    readonly property Process groundProcess: Process {}
+
     // Also pushed at startup: if the setting never changes, the fragment
     // kitty.conf includes would never be written.
     Component.onCompleted: {
         root.pushTerminalFont()
+        root.pushTerminalGround()
         root.pushGreeting()
     }
 

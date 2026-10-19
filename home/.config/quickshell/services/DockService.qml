@@ -45,7 +45,7 @@ Singleton {
 
     // Space the launcher button takes, including its divider.
     readonly property real lead:
-        root.hasLauncher ? Theme.dockIcon + 2 * Theme.dockGap : 0
+        root.hasLauncher ? Theme.dockLauncher + 2 * Theme.dockGap : 0
 
     // Hover index for the launcher button; negative because it is not in
     // `items`.
@@ -323,7 +323,7 @@ Singleton {
 
     readonly property real length: {
         if (root.count === 0)
-            return root.hasLauncher ? 2 * Theme.dockPadding + Theme.dockIcon : 0
+            return root.hasLauncher ? 2 * Theme.dockPadding + Theme.dockLauncher : 0
         return root.offsetOf(root.count - 1) + Theme.dockIcon + Theme.dockPadding
     }
 

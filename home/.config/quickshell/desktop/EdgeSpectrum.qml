@@ -100,10 +100,11 @@ Item {
             const pointer = root.pointer()
             const edge = DeckService.receiving
             const spot = DesktopService.landing
+            const removed = DesktopService.overTray(root.screenName, pointer.x, pointer.y)
             DesktopService.dragging = ""
             DesktopService.landing = null
             DeckService.receiving = ""
-            if (DesktopService.overTray(root.screenName, pointer.x, pointer.y))
+            if (removed)
                 DesktopService.remove(root.key)
             else if (edge !== "")
                 DesktopService.setSpectrumEdge(root.key, root.screenName, edge)

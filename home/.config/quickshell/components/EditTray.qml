@@ -20,7 +20,9 @@ import "../theme"
 // in whole columns and rows, the pieces flowing into the new width and the
 // rest scrolled by the wheel or the bar in the right margin. It opens at its
 // home every time; its size lasts for the session. Arranging ends with Escape
-// or the right button.
+// or the right button. While something is carried the caller can stow it:
+// the card fades out of the way and a strip along the bottom takes its place
+// as the drop that removes.
 //
 // Fills its parent; only the card takes the pointer. The caller hands in the
 // entries, the packing unit and a `delegate`, which gets `modelData` with the
@@ -28,8 +30,13 @@ import "../theme"
 Item {
     id: root
 
-    // [{ id, name, cols, rows }]: the smallest footprint, in packing units.
+    // [{ id, name, cols, rows, group }]: the smallest footprint, in packing
+    // units, and the group it is shown under when there are `groups`.
     property var entries: []
+
+    // [{ id, label }]: sections in this order, each packed on its own under
+    // its label. Empty, the card is one mosaic with no words.
+    property var groups: []
     property Component delegate: null
 
     // One packing unit in real pixels, the street between two, and the scale
@@ -54,12 +61,25 @@ Item {
     // Its size once resized, as { columns, rows } (null when it never was).
     property var size: null
 
+    // Neither moved nor resized: no grip, no corner, and the card's own drag
+    // off. A height set here is the card's, the mosaic scrolling inside.
+    property bool fixed: false
+    property real fixedHeight: 0
+
     signal resized(int columns, int rows)
 
     // Highlighted while a dragged item is over it: dropping removes it.
     property bool receiving: false
 
+    // Out of the way while something is carried, the strip standing in for
+    // it; still in the scene, so a piece pulled out of it keeps its drag.
+    property bool stowed: false
+    property string dropLabel: ""
+    // Where the strip is drawn, so it can sit over what is being carried.
+    property Item zoneParent: root
+
     readonly property alias card: card
+    readonly property alias zone: zone
 
     // Whether a gesture has hold of the pointer here: the card moved by its
     // edge or its grip, stretched by its corner, or its bar scrubbed. The
@@ -93,6 +113,8 @@ Item {
             || Tr.t(left.name).localeCompare(Tr.t(right.name)))
 
     readonly property int widest: root.order.reduce((most, entry) => Math.max(most, entry.cols), 1)
+    // The narrowest the card gets: the widest piece and its margins.
+    readonly property real narrowest: root.span(root.widest, root.strideX) + 2 * root.pad
     readonly property int tallest: root.order.reduce((most, entry) => Math.max(most, entry.rows), 1)
 
     // While the corner is pulled, the size under the pointer.
@@ -102,7 +124,33 @@ Item {
     readonly property int columns: root.pullColumns > 0 ? root.pullColumns
         : Math.max(root.widest, root.size ? root.size.columns : root.startColumns)
 
-    readonly property var layout: root.pack(root.columns)
+    // A section's label and the space under it.
+    readonly property real headingHeight: Theme.fontSizeLabel + 2 * Theme.cardRowGap
+
+    readonly property var layout: root.groups.length > 0
+        ? root.packGroups(root.columns) : root.pack(root.columns, root.order)
+
+    // Each group packed on its own, one under the other, its label above it.
+    function packGroups(columns: int): var {
+        const pieces = []
+        const headings = []
+        let top = 0
+        for (const group of root.groups) {
+            const members = root.order.filter(entry => entry.group === group.id)
+            if (members.length === 0)
+                continue
+            if (headings.length > 0)
+                top += root.street
+            headings.push({ label: group.label, y: top })
+            top += root.headingHeight
+            const part = root.pack(columns, members)
+            for (const piece of part.pieces)
+                pieces.push(Object.assign({}, piece, { top: top }))
+            top += root.span(part.rows, root.strideY)
+        }
+        return { pieces: pieces, headings: headings, height: top,
+            rows: Math.ceil((top + root.street) / root.strideY) }
+    }
 
     // As many rows as it was sized to, never fewer than the tallest piece
     // takes nor more than there are.
@@ -116,14 +164,14 @@ Item {
         id: piece.id,
         name: piece.name,
         x: piece.col * root.strideX,
-        y: piece.row * root.strideY,
+        y: (piece.top ?? 0) + piece.row * root.strideY,
         width: root.span(piece.cols, root.strideX),
         height: root.span(piece.rows, root.strideY)
     }))
 
-    function pack(columns: int): var {
+    function pack(columns: int, entries: var): var {
         const taken = []
-        const pieces = root.order.map(entry => {
+        const pieces = entries.map(entry => {
             const cols = Math.min(entry.cols, columns)
             const spot = root.spotFor(taken, columns, cols, entry.rows)
             for (let row = spot.row; row < spot.row + entry.rows; row++) {
@@ -172,20 +220,24 @@ Item {
 
         // No taller than the room; the mosaic scrolls inside when it is.
         width: mosaic.width + 2 * root.pad
-        height: Math.min(root.span(root.shownRows, root.strideY) + 2 * root.pad,
-            Math.max(2 * root.pad, root.height - 2 * Theme.desktopGutter))
+        height: root.fixedHeight > 0 ? root.fixedHeight
+            : Math.min(root.span(root.shownRows, root.strideY) + 2 * root.pad,
+                Math.max(2 * root.pad, root.height - 2 * Theme.desktopGutter))
         radius: Theme.radiusLarge
         color: Theme.island
         border.color: root.receiving ? Theme.accent : Theme.borderIn(QsWindow.window)
         border.width: root.receiving ? 2 : 1
+        opacity: root.stowed ? 0 : 1
 
         Behavior on border.color { ColorAnimation { duration: Theme.durationFast } }
+        Behavior on opacity { NumberAnimation { duration: Theme.durationFast } }
 
         // Anywhere but a piece moves the card. The tap is exclusive from the
         // press, so neither the surface below nor a widget behind ever sees
         // it, and the drag on the same item takes the point over. A piece is
         // delivered first and keeps its own.
         HoverHandler {
+            enabled: !root.stowed && !root.fixed
             cursorShape: mover.active ? Qt.ClosedHandCursor : Qt.SizeAllCursor
         }
 
@@ -199,7 +251,7 @@ Item {
         DragHandler {
             id: mover
 
-            enabled: !cornerHover.hovered && !stretch.active
+            enabled: !root.fixed && !cornerHover.hovered && !stretch.active
                 && !gripHover.hovered && !carry.active
                 && !railHover.hovered && !scrub.active
             target: card
@@ -236,7 +288,26 @@ Item {
 
                 y: -Math.min(root.scrolled, viewport.overflow)
                 width: root.span(root.columns, root.strideX)
-                height: root.span(root.layout.rows, root.strideY)
+                height: root.layout.height ?? root.span(root.layout.rows, root.strideY)
+
+                // Each group's label, over its part of the mosaic.
+                Repeater {
+                    model: root.layout.headings ?? []
+
+                    Text {
+                        required property var modelData
+
+                        y: modelData.y + (root.headingHeight - height) / 2
+                        text: Tr.t(modelData.label)
+                        font.family: Theme.fontFamily
+                        // A settings group's small capitals.
+                        font.pixelSize: Theme.fontSizeLabel
+                        font.weight: Font.DemiBold
+                        font.capitalization: Font.AllUppercase
+                        font.letterSpacing: 0.8
+                        color: Theme.textMuted
+                    }
+                }
 
                 Repeater {
                     model: root.packed
@@ -359,6 +430,7 @@ Item {
         Rectangle {
             id: grip
 
+            visible: !root.fixed
             anchors.left: parent.left
             anchors.top: parent.top
             anchors.leftMargin: -8
@@ -413,6 +485,7 @@ Item {
         Rectangle {
             id: corner
 
+            visible: !root.fixed
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.rightMargin: -8
@@ -502,6 +575,57 @@ Item {
                     root.pullColumns = Math.max(root.widest, Math.min(most, across))
                     root.pullRows = Math.max(1, Math.min(deepest, down))
                 }
+            }
+        }
+    }
+
+    // ── DROP STRIP ──────────────────────────────────────────────────────────
+    //
+    // Where the card was home, along the bottom: what is let go on it is
+    // taken off. Only drawn while the card is stowed.
+
+    Rectangle {
+        id: zone
+
+        parent: root.zoneParent
+        z: 20
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Theme.desktopGutter
+        width: dropRow.implicitWidth + 2 * root.pad
+        height: Theme.capsuleHeight + 8
+        radius: height / 2
+        color: Theme.island
+        border.color: root.receiving ? Theme.red : Theme.borderIn(QsWindow.window)
+        border.width: root.receiving ? 2 : 1
+        opacity: root.stowed ? 1 : 0
+        visible: zone.opacity > 0
+        scale: root.receiving ? 1.06 : 1
+
+        Behavior on opacity { NumberAnimation { duration: Theme.durationFast } }
+        Behavior on scale { NumberAnimation { duration: Theme.durationFast } }
+        Behavior on border.color { ColorAnimation { duration: Theme.durationFast } }
+
+        Row {
+            id: dropRow
+
+            anchors.centerIn: parent
+            spacing: 8
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "󰆴"
+                font.family: Theme.fontMono
+                font.pixelSize: Theme.fontSizeLarge
+                color: root.receiving ? Theme.red : Theme.textMuted
+            }
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: root.dropLabel
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeRegular
+                color: root.receiving ? Theme.red : Theme.text
             }
         }
     }

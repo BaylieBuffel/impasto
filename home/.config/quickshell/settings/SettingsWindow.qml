@@ -10,6 +10,7 @@
 import QtQuick
 import Quickshell
 
+import "../components"
 import "../theme"
 
 // Settings is a window rather than an island panel, so the bar and island stay
@@ -20,6 +21,7 @@ import "../theme"
 // shadow. `windowrules.lua` floats and sizes it, matched on the title.
 FloatingWindow {
     id: root
+    CornerGuard {}
 
     // Kept in sync with `visible` both ways, so closing the window from the
     // compositor resets it and it can be opened again.

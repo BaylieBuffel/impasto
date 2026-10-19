@@ -35,6 +35,8 @@ Item {
         calendar: calendarLarge,
         weather: weatherLarge,
         stats: statsLarge,
+        screentime: screenTimeLarge,
+        markets: marketsLarge,
         media: mediaLarge,
         claude: claudeLarge,
         codex: codexLarge,
@@ -840,5 +842,191 @@ Item {
         id: trayLarge
 
         TrayFace { ink: root.ink; row: root.row; family: "4x4" }
+    }
+
+    // The first pair charted across the middle, and the next ones under it.
+    Component {
+        id: marketsLarge
+
+        WidgetFace {
+
+            ink: root.ink
+            label: MarketsService.lead ? `${MarketsService.lead.base}/${MarketsService.lead.quote}` : "Markets"
+            note: !MarketsService.lead
+                ? (MarketsService.pairs.length === 0 ? "nothing on the list" : "no prices")
+                : `${MarketsService.change(MarketsService.lead)} · ${MarketsService.lead.period}`
+            noteTint: MarketsService.lead ? MarketsService.tint(MarketsService.lead) : root.ink.muted
+
+            Text {
+                anchors.centerIn: parent
+                text: MarketsService.glyph(MarketsService.lead)
+                font.family: Theme.fontMono
+                font.pixelSize: 34
+                color: root.ink.text
+            }
+            reading: MarketsService.price(MarketsService.lead)
+
+            body: [
+                Column {
+                    id: marketsRows
+
+                    anchors.fill: parent
+                    spacing: 8
+
+                    readonly property var rows: MarketsService.others.slice(0, 3)
+
+                    Sparkline {
+                        width: parent.width
+                        height: parent.height - marketsRows.rows.length * 26
+                        values: MarketsService.shape(MarketsService.lead)
+                        stroke: MarketsService.tint(MarketsService.lead)
+                        thickness: 2
+                    }
+
+                    Repeater {
+                        model: ScriptModel {
+                            values: marketsRows.rows
+                        }
+
+                        Item {
+                            id: other
+
+                            required property var modelData
+
+                            width: parent.width
+                            height: 18
+
+                            Text {
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: `${other.modelData.base}/${other.modelData.quote}`
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeSmall
+                                color: root.ink.muted
+                            }
+
+                            Text {
+                                id: otherChange
+
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 64
+                                horizontalAlignment: Text.AlignRight
+                                text: MarketsService.change(other.modelData)
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeLabel
+                                font.features: { "tnum": 1 }
+                                color: MarketsService.tint(other.modelData)
+                            }
+
+                            Text {
+                                anchors.right: otherChange.left
+                                anchors.rightMargin: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: MarketsService.price(other.modelData)
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeSmall
+                                font.weight: Font.DemiBold
+                                font.features: { "tnum": 1 }
+                                color: root.ink.text
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    }
+
+    // Today by the hour, and the three most used under it.
+    Component {
+        id: screenTimeLarge
+
+        WidgetFace {
+            ink: root.ink
+            label: Tr.t("Screen time")
+            reading: ScreenTimeService.duration(ScreenTimeService.todayTotal)
+            note: ScreenTimeService.todayNote
+
+            UsageRing {
+                anchors.fill: parent
+                anchors.margins: 4
+                parts: ScreenTimeService.todayParts
+                thickness: 5
+                accent: root.ink.accent
+                ink: root.ink.text
+            }
+
+            body: [
+                Column {
+                    id: screenTimeRows
+
+                    anchors.fill: parent
+                    spacing: 8
+
+                    readonly property var rows: ScreenTimeService.todayDigest.apps.slice(0, 3)
+
+                    UsageBars {
+                        width: parent.width
+                        height: parent.height - screenTimeRows.rows.length * 26
+                        stacks: ScreenTimeService.todayDigest.stacks
+                        ceiling: 3600
+                        gap: 2
+                        accent: root.ink.accent
+                        ink: root.ink.text
+                    }
+
+                    Repeater {
+                        model: screenTimeRows.rows
+
+                        Item {
+                            id: used
+
+                            required property var modelData
+
+                            width: parent.width
+                            height: 18
+
+                            Image {
+                                id: usedIcon
+
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 16
+                                height: 16
+                                sourceSize: Qt.size(32, 32)
+                                asynchronous: true
+                                source: (used.modelData.icon ?? "") !== ""
+                                    ? Theme.appIcon(used.modelData.icon) : ""
+                            }
+
+                            Text {
+                                anchors.left: usedIcon.right
+                                anchors.leftMargin: 8
+                                anchors.right: usedTime.left
+                                anchors.rightMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: used.modelData.name
+                                elide: Text.ElideRight
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeSmall
+                                color: root.ink.text
+                            }
+
+                            Text {
+                                id: usedTime
+
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: ScreenTimeService.duration(used.modelData.seconds)
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeSmall
+                                font.features: { "tnum": 1 }
+                                color: root.ink.muted
+                            }
+                        }
+                    }
+                }
+            ]
+        }
     }
 }

@@ -12,6 +12,7 @@ import Quickshell
 
 import "../../theme"
 import "../../services"
+import "../../components"
 
 // 8×2 faces: a strip. The same grid as the other families (mark, label, and the
 // reading along the bottom), with the reading set large. Suits the bare style
@@ -31,6 +32,8 @@ Item {
         clock: clockBand,
         weather: weatherBand,
         github: githubBand,
+        screentime: screenTimeBand,
+        markets: marketsBand,
         notes: notesBand,
         photo: photoBand,
         spectrum: spectrumBand,
@@ -196,5 +199,147 @@ Item {
         id: trayBand
 
         TrayFace { ink: root.ink; row: root.row; family: "8x2" }
+    }
+
+    // The first pair large, and up to three more beside it, each with its
+    // line.
+    Component {
+        id: marketsBand
+
+        WidgetFace {
+            id: marketsFace
+
+            ink: root.ink
+            label: MarketsService.lead ? `${MarketsService.lead.base}/${MarketsService.lead.quote}` : "Markets"
+            note: !MarketsService.lead
+                ? (MarketsService.pairs.length === 0 ? "nothing on the list" : "no prices")
+                : `${MarketsService.change(MarketsService.lead)} · ${MarketsService.lead.period}`
+            noteTint: MarketsService.lead ? MarketsService.tint(MarketsService.lead) : root.ink.muted
+
+            Text {
+                anchors.centerIn: parent
+                text: MarketsService.glyph(MarketsService.lead)
+                font.family: Theme.fontMono
+                font.pixelSize: 34
+                color: root.ink.text
+            }
+            reading: MarketsService.price(MarketsService.lead)
+            readingSize: Theme.fontSizeDisplay * 0.65
+            extraShare: MarketsService.others.length > 0 ? 0.6 : 0.5
+
+            readonly property var columns: MarketsService.others.length > 0
+                ? MarketsService.others.slice(0, 3) : []
+
+            extra: [
+                Sparkline {
+                    visible: marketsFace.columns.length === 0
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width
+                    height: 64
+                    values: MarketsService.shape(MarketsService.lead)
+                    stroke: MarketsService.tint(MarketsService.lead)
+                    thickness: 2
+                },
+
+                Row {
+                    anchors.fill: parent
+                    spacing: 18
+                    visible: marketsFace.columns.length > 0
+
+                    Repeater {
+                        model: ScriptModel {
+                            values: marketsFace.columns
+                        }
+
+                        Column {
+                            id: column
+
+                            required property var modelData
+
+                            width: (parent.width - 18 * (marketsFace.columns.length - 1))
+                                / marketsFace.columns.length
+                            anchors.bottom: parent.bottom
+                            spacing: 3
+
+                            Sparkline {
+                                width: parent.width
+                                height: 34
+                                values: MarketsService.shape(column.modelData)
+                                stroke: MarketsService.tint(column.modelData)
+                                showDot: false
+                            }
+
+                            Text {
+                                width: parent.width
+                                text: MarketsService.price(column.modelData)
+                                elide: Text.ElideRight
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeRegular
+                                font.weight: Font.DemiBold
+                                font.features: { "tnum": 1 }
+                                color: root.ink.text
+                            }
+
+                            Text {
+                                width: parent.width
+                                text: `${column.modelData.base} ${MarketsService.change(column.modelData)}`
+                                elide: Text.ElideRight
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeLabel
+                                color: MarketsService.tint(column.modelData)
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    }
+
+    // Today large, its hours, and the sessions in a line under them.
+    Component {
+        id: screenTimeBand
+
+        WidgetFace {
+            ink: root.ink
+            label: Tr.t("Screen time")
+            reading: ScreenTimeService.duration(ScreenTimeService.todayTotal)
+            note: ScreenTimeService.todayNote
+
+            UsageRing {
+                anchors.fill: parent
+                anchors.margins: 4
+                parts: ScreenTimeService.todayParts
+                thickness: 5
+                accent: root.ink.accent
+                ink: root.ink.text
+            }
+            readingSize: Theme.fontSizeDisplay * 0.65
+            extraShare: 0.6
+
+            extra: [
+                Column {
+                    anchors.fill: parent
+                    spacing: 8
+
+                    UsageBars {
+                        width: parent.width
+                        height: parent.height - 18
+                        stacks: ScreenTimeService.todayDigest.stacks
+                        ceiling: 3600
+                        gap: 3
+                        accent: root.ink.accent
+                        ink: root.ink.text
+                    }
+
+                    SessionRibbon {
+                        width: parent.width
+                        height: 10
+                        sessions: ScreenTimeService.todayDigest.sessions
+                        accent: root.ink.accent
+                        ink: root.ink.text
+                    }
+                }
+            ]
+        }
     }
 }

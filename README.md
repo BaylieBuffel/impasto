@@ -17,11 +17,16 @@
 </p>
 
 <p align="center">
+  <a href="https://trendshift.io/repositories/233611"><img src="https://trendshift.io/api/badge/trendshift/repositories/233611/daily?language=QML" alt="#1 QML repository of the day on Trendshift" width="250" height="55"></a>
+  <a href="https://trendshift.io/repositories/233611"><img src="https://trendshift.io/api/badge/trendshift/repositories/233611/weekly?language=QML" alt="#4 QML repository of the week on Trendshift" width="250" height="55"></a>
+</p>
+
+<p align="center">
   <a href="https://andreumassanet.github.io/impasto-docs/"><b>Documentation</b></a> ·
   <a href="#the-island">The island</a> ·
   <a href="#the-bar">The bar</a> ·
-  <a href="#the-launcher-and-the-dock">The launcher</a> ·
   <a href="#the-desktop">The desktop</a> ·
+  <a href="#liquid-glass">Liquid glass</a> ·
   <a href="#installation">Installation</a> ·
   <a href="#keys">Keys</a>
 </p>
@@ -62,9 +67,10 @@ arrives there with its buttons, and stays in the control centre's list.
   <img src=".github/assets/bar-styles.jpg" alt="The same bar in its three styles: grouped round the island, spread to the two edges, and everything inside one capsule" width="100%">
 </p>
 
-**Three styles, one layout.** Pieces are dragged out of a catalogue onto a
-picture of the bar, then drawn grouped round the island, spread to the edges, or
-all inside one capsule. A module tells you something and opens its detail; a
+**Four styles, one layout.** Pieces are dragged out of a catalogue onto a
+picture of the bar, then drawn grouped round the island, spread to the edges,
+all inside one capsule, or on a bezel across the top edge that the island
+drops out of. The screen's corners can be rounded to match. A module tells you something and opens its detail; a
 button opens something — any panel the control centre does, the capture
 surface, or Settings. Each shows its symbol or its ring, with its figure
 always, never or under the pointer — two settings for the whole bar, and any
@@ -78,122 +84,56 @@ own and the dock is on all of them, a workspace number brings that workspace to
 the screen you are on, and the brightness keys dim that screen — an external
 monitor over DDC/CI.
 
-## The launcher and the dock
-
-<p align="center">
-  <img src=".github/assets/launcher-and-dock.jpg" alt="The launcher listing applications ranked by use, the clipboard history with an image drawn in its row, and the dock with the terminal's menu open over its windows" width="100%">
-</p>
-
-**The first character says what the field is for.** Plain text searches
-applications, `=` calculates, `@` finds an open window, `!` starts a countdown,
-`'` is the clipboard history, `:` picks an emoji, and `>` is the shell itself —
-every panel and setting by name. Applications are ranked by what you actually launch.
-
-**The dock holds what you pinned, then whatever else is open**, and the same
-pins come first in the launcher. Right-click an icon for its windows by name.
-
 ## The desktop
-
-<p align="center">
-  <img src=".github/assets/desktop-themes.jpg" alt="The same desk split in three: Modern on the left, figures with captions; Analogue in the middle, a thermometer, a wall calendar, a battery cell, a knob, a parcel, a joystick; Sticker on the right, die-cut shapes in pastel colours for the weather, the pet, the date, a clock and the processor" width="100%">
-</p>
-
-**Any module can live on the wallpaper**, on a grid, in four shapes: a square,
-a card, a large square and a band. Right-click the wallpaper to arrange — a card
-holds every module, a corner is pulled for another shape, and a click
-opens that widget's own look — for a photo widget, the picture of your own it
-holds.
-
-**Three themes on the same modules**: *Modern* is a figure with a caption,
-*Analogue* draws each one as an object, *Sticker* cuts it out as coloured
-stickers that sit on the wallpaper without filling their squares, and any of
-them is a choice per widget. A
-spectrum of whatever is playing sits on the grid as bare bars, or runs along a
-whole edge under the windows.
 
 <p align="center">
   <img src=".github/assets/repaint.gif" alt="The wallpaper changing three times, and the bar, the widgets, the terminal and the system monitor repainting with each one" width="100%">
 </p>
 
 **The palette comes out of the painting.** Pick a wallpaper and its colours
-reach everything at once: the island and the widgets, the terminal and the
-prompt, btop, cava, yazi, neovim, VSCodium, the GTK, Qt and KDE windows, Thunar
-down to its folders, Vesktop, Zen and Spotify. Or pick one of nine palettes
-instead. The desk comes with forty paintings, in the style it is named after,
-and a video of your own in `~/.local/share/wallpapers/animated` can be the
-wallpaper too: it plays under the windows and the palette comes from its first
-frame.
+reach everything at once: the island and the widgets, the terminal, neovim,
+VSCodium, the GTK and Qt windows, Nautilus down to its folders, Vesktop, Zen
+and Spotify. Forty paintings come with it, and a video can be the wallpaper
+too.
 
-In the terminal, the prompt is laid out like the bar, and `fa` greets you with
-fastfetch beside an animated scene drawn in pixel art out of the palette.
+**Any module can live on the wallpaper**, on a grid, in four shapes, drawn in
+one of three themes: *Modern*, *Analogue* or *Sticker*. Right-click the
+wallpaper to arrange it.
 
-## Notes and tasks
+## Liquid glass
 
 <p align="center">
-  <img src=".github/assets/notes-and-tasks.jpg" alt="The deck of pastel notes in handwriting, one note open with the island become yellow paper, the kanban board with three lanes, and a task open with its day and lane" width="100%">
+  <img src=".github/assets/liquid-glass.jpg" alt="The control centre three times over a painting of a rocket launch: solid black, tinted glass over the blur, and clear liquid glass lit from one side" width="100%">
 </p>
 
-**A note is paper**: a pastel square with a title and the body in handwriting.
-`SUPER + S` opens the deck; on the wallpaper a note sits on a square, or stacks
-with others along an edge as tabs that peek out under the pointer.
+**Every layer picks its material**: the island and the bar, the dock, the
+widgets and the terminal, each classic, glass or liquid. The windows can bend
+the painting at their edges too.
 
-**A board for what has to be done.** `SUPER + K` is to do, doing, done, with
-cards dragged between the lanes, and a task's day shows as a dot under the
-month wherever a month is drawn.
-
-## Games and pets
+## Everything else, in the island
 
 <p align="center">
-  <img src=".github/assets/games-and-pets.jpg" alt="Tetris and Whack-a-Mole played in the island, and the pets' page with Pip out and the rest of the family waiting" width="100%">
+  <img src=".github/assets/panels.jpg" alt="Six panels of the island: notes in handwriting on pastel paper, Tetris, the task board with three lanes, a day of screen time by app, the virtual machine catalogue, and the local servers listening with their ports" width="100%">
 </p>
 
-**Eleven small games, played in the island** — `SUPER + G` opens a shelf, and
-the island becomes the board. **A family of five small creatures lives on the
-bar**: one out at a time, earning levels from being fed and played with, each
-hatched from an egg and drawn in one of four styles. Nothing dies, and a week
-away costs nothing.
+**Every tool is a panel of the island**, not a window: notes, tasks, eleven
+games, screen time, virtual machines, the servers you have running, your
+packages and effects for the webcam in any call. A pet lives on the bar, and
+<kbd>SUPER</kbd> <kbd>H</kbd> lists the key for each.
 
 ## Lock and login
 
 <p align="center">
-  <img src=".github/assets/lock-and-login.jpg" alt="The lock screen resting on its clock over the blurred desk, the island growing round the padlock while it looks for a face, and the SDDM login screen over a blurred painting — the same island, clock and pill" width="100%">
+  <img src=".github/assets/lock.gif" alt="The lock screen over the blurred cover of the track playing, the lyrics moving line by line beside the cover, then a touch: a ring turns round the padlock, closes green, and the blur lifts off the desk" width="100%">
 </p>
 
-**The shell locks the session itself**, over the blurred desk, and the login
-screen is the same lock with the desk taken away: an SDDM theme with the same
-island, the same clock and the same pill, over a blurred painting. Both rest on
-the clock alone. Any key brings in your account and the field, and is already
-the first letter of your password; Escape sends them away again. The clock is
-stacked or on one line, in Settings → Session → Lock screen, and the login
-screen always stacks it. The picture and the name are your account's, and
-Settings → Session changes them for both screens at once: drop an image on the
-card and it is made square and kept where the login screen reads it; type a
-name and it becomes the account's full name.
-
-**With an infrared camera, the lock opens for your face.** Touch a key or the
-pointer and the island grows under the camera, a ring turns around its
-padlock while it looks, closes green, the padlock opens and the blur lifts off
-the desk. It is its own conversation beside the password, so a face it does
-not know never costs you a try, and the login screen still asks for the
-password after a boot. Settings → Session lists the faces it knows, adds
-another, removes one, and lets you try it without locking.
-
-## Settings
-
-<p align="center">
-  <img src=".github/assets/settings.jpg" alt="Two pages of the settings window: the bar arranged on a picture of it from a catalogue of modules and buttons, and the desktop's module settings with the pet drawn in its four styles" width="100%">
-</p>
-
-**Settings is the one panel that is not the island** — an ordinary window where
-each option is drawn as the thing it changes, and profiles keep whole desks
-under names: *Moon castle*, *Fuji* and *Night bay* come with it.
+**The lock shows what is playing**: the cover blurred behind it and the
+lyrics in time. **With an infrared camera it opens for your face.** The login
+screen and the boot splash are the same design, before there is a session.
 
 ## Installation
 
-Arch Linux, and Hyprland 0.56 or newer (tested on 0.56.2), configured in Lua.
-Run it from a terminal, in the Hyprland session or on a console before there
-is one. The two plugins are built against the compositor that is running, so
-from a console the first session opens a terminal that builds them:
+Arch Linux and Hyprland 0.56 or newer, from a terminal or a console:
 
 ```bash
 git clone https://github.com/andreumassanet/impasto.git ~/impasto
@@ -201,32 +141,25 @@ cd ~/impasto
 ./setup install
 ```
 
-It installs the packages it is missing — upgrading the system in the same step,
-as Arch asks — oh-my-zsh, everything in `home/` into your home and everything
-in `system/` into `/`, the two Hyprland plugins and the vector cursor, and the
-login screen, switched on unless your machine already uses another display
-manager. It sets up Thunar, VSCodium, Vesktop and Spotify, dark GTK
-applications, and what opens which kind of file — leaving alone any your
-machine already has an answer for. Where there is an infrared camera it
-installs howdy-next and asks to enrol your face. It asks for your password
-through sudo for pacman, for the copy into `/`, and to let spicetify patch
-Spotify. A program that is open, or a Spotify you have never started, is
-skipped with the reason and set up by the next `update`. After that they follow
-the wallpaper on their own; Spotify from its next start.
+It installs what is missing, copies `home/` and `system/` into place, and sets
+up the login screen, the plugins and the programs around the shell. Run
+`./setup` alone to pick from a menu instead.
 
-Run `./setup` with nothing after it and it asks instead: the verbs on one
-screen, and what an install may leave out on the next, which is the flags below
-with somewhere to press them.
+<details>
+<summary><b>Flags</b></summary>
+<br>
 
 | Flag | |
 |---|---|
 | `--skip-packages` | install nothing; copy and build only |
 | `--skip-system` | leave `/` alone — no login screen, and no password for it |
 | `--skip-plugins` | no shake to find, no glass |
-| `--skip-extras` | leave Thunar, VSCodium, Vesktop, Spotify, GTK and face unlock alone |
+| `--skip-extras` | leave Nautilus, VSCodium, Vesktop, Spotify, GTK, face unlock, the camera and the boot splash alone |
 | `--aur-helper yay\|paru` | which helper builds the AUR half — built from the AUR if you have neither |
 | `--noconfirm` | take the default at every question |
 | `-n`, `--dry-run` | say what would happen, and do none of it |
+
+</details>
 
 ```bash
 ./setup update       # git pull, then install again — the same flags
@@ -234,22 +167,8 @@ with somewhere to press them.
 ./setup help         # every verb and flag
 ```
 
-`update` follows the branch you cloned: `main` moves only when a version is
-released, and work in progress lives on `dev`. The version installed is under
-Settings → System, with what the branch has waiting since it and a button that
-runs `update` in a terminal.
-
-**Nothing is linked: `setup` copies**, and remembers what it wrote. A file of
-yours already in the way is moved to `~/.local/state/impasto/backups/` first; a
-file you edit afterwards is left alone, with the new version beside it as
-`<name>.new`, and one you delete stays deleted — the wallpapers you do not want,
-say. Settings → System lists both, each with a button to put impasto's version
-back. Editing the repository itself? `./setup sync` copies it onto the
-desk, and `./setup sync --watch` keeps doing it on every save.
-
-Every package is listed in `packages/pacman.txt` and `packages/aur.txt`, grouped
-by what it is for; an optional one that is missing takes its own control away
-rather than failing.
+Nothing is linked: `setup` copies, keeps a backup of anything in the way, and
+never overwrites a file you edited.
 
 <details>
 <summary><b>Components</b></summary>
@@ -269,7 +188,7 @@ rather than failing.
 | 📊 | System monitor | [btop](https://github.com/aristocratos/btop) |
 | 🎵 | Audio visualiser | [cava](https://github.com/karlstav/cava) |
 | 📁 | File manager | [yazi](https://yazi-rs.github.io) |
-| 🗂️ | File manager in a window | [Thunar](https://docs.xfce.org/xfce/thunar/start) |
+| 🗂️ | File manager in a window | [Nautilus](https://apps.gnome.org/Nautilus/) |
 | ✏️ | Editor | [neovim](https://neovim.io) |
 | 📝 | Editor in a window | [VSCodium](https://vscodium.com) |
 | 🖼️ | Image viewer | [imv](https://sr.ht/~exec64/imv/) |
@@ -279,7 +198,9 @@ rather than failing.
 | 🌐 | Browser | [Zen](https://zen-browser.app) |
 | 🔆 | Monitor brightness | [ddcutil](https://www.ddcutil.com) |
 | 🔑 | Login screen | [SDDM](https://github.com/sddm/sddm) |
+| 🎨 | Boot splash | [Plymouth](https://gitlab.freedesktop.org/plymouth/plymouth) |
 | 👤 | Face unlock | [howdy-next](https://codeberg.org/nathawat/howdy-next) |
+| 📷 | Camera effects | [MediaPipe](https://ai.google.dev/edge/mediapipe) · [v4l2loopback](https://github.com/umlaeute/v4l2loopback) |
 
 </details>
 
@@ -303,9 +224,8 @@ knowing first:
 
 These are worth your time whether or not you use this repository. No code was
 copied from any of them; what carried over from the shells are ideas — one file
-per island state, one transient signal for every ephemeral event, input
-debounced to one frame, and a capture that photographs the screen and draws the
-selection on the photograph.
+per island state, one transient signal for every ephemeral event, and input
+debounced to one frame.
 
 - [saneAspect](https://www.youtube.com/@saneAspect) — the Hyprland setups on
   YouTube that started all this
@@ -315,9 +235,6 @@ selection on the photograph.
   pill bar built to stay light without a dedicated GPU
 - [k4](https://github.com/k4ditano/k4) — a dynamic island bar with a documented
   plugin API
-- [HyprQuickshot](https://github.com/JamDon2/hyprquickshot) and its fork
-  [HyprQuickFrame](https://github.com/Ronin-CK/HyprQuickFrame) — a capture
-  surface in Quickshell
 - [diegoMalagrida/dotfiles](https://github.com/diegoMalagrida/dotfiles) — an
   Arch Linux desk ready to install on a fresh system
 
@@ -331,6 +248,15 @@ are other people's work, carried as they are:
 [Tokyo Night](https://github.com/folke/tokyonight.nvim),
 [Gruvbox](https://github.com/morhetz/gruvbox), [Nord](https://www.nordtheme.com)
 and [Rosé Pine](https://rosepinetheme.com).
+
+## Star history
+
+<a href="https://star-history.com/#andreumassanet/impasto&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=andreumassanet/impasto&type=Date&theme=dark">
+    <img src="https://api.star-history.com/svg?repos=andreumassanet/impasto&type=Date" alt="Star history of impasto" width="100%">
+  </picture>
+</a>
 
 ## License
 

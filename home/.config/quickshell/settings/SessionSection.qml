@@ -19,7 +19,7 @@ import "../services"
 import "../components"
 import "../lock"
 
-// The lock screen and the idle policy. The shell locks through
+// The lock screen, face unlock and the idle policy, a part each. The shell locks through
 // ext-session-lock and shows the blurred desktop behind the lock. The blur
 // slider previews over the wallpaper, since the lock's own capture of the
 // screen only exists once locked.
@@ -76,8 +76,6 @@ SettingsSection {
         Layout.fillWidth: true
         visible: root.tab === "lock"
         spacing: root.spacing
-
-        onVisibleChanged: if (visible) FaceService.refresh()
 
         SettingGroup {
             title: Tr.t("You")
@@ -270,7 +268,7 @@ SettingsSection {
         SettingGroup {
             title: Tr.t("Music")
             note: Tr.t("Only while something is playing.")
-            hint: Tr.t("The lyrics follow the Lyrics switch on the Bar & Island page, and are looked up on lrclib.net.")
+            hint: Tr.t("The lyrics follow the Lyrics switch on the Modules page, and are looked up on lrclib.net.")
 
             SettingTiles {
                 label: Tr.t("Show")
@@ -495,6 +493,17 @@ SettingsSection {
             }
         }
 
+    }
+
+    // ── FACE UNLOCK ─────────────────────────────────────────────────────────
+
+    ColumnLayout {
+        Layout.fillWidth: true
+        spacing: root.spacing
+        visible: root.tab === "face"
+
+        onVisibleChanged: if (visible) FaceService.refresh()
+
         // Face unlock: what the machine has, the faces howdy keeps, and trying
         // one the way the lock does. Everything that needs root goes through
         // FaceService's helper, which asks for the password itself.
@@ -652,7 +661,6 @@ SettingsSection {
             }
         }
     }
-
 
     // ── WHEN YOU LEAVE ──────────────────────────────────────────────────────
 

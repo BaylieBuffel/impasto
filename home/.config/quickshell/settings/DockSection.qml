@@ -15,7 +15,7 @@ import "../theme"
 import "../services"
 import "../components"
 
-// Edge, size, behaviour and kept applications. Icon order is changed by
+// Edge, look, behaviour and kept applications. Icon order is changed by
 // dragging on the dock itself.
 SettingsSection {
     id: root
@@ -131,46 +131,26 @@ SettingsSection {
                 onSelected: id => SettingsService.set("dockAlignment", id)
             }
         }
+
+        SettingRow {
+            label: Tr.t("On every screen")
+            reading: SettingsService.dockEverywhere
+                ? Tr.t("One on each, all showing the same")
+                : Tr.t("Only on the screen you are on")
+            locked: root.off || root.screens < 2
+            reason: root.off ? root.offReason : Tr.t("Only one screen is on")
+
+            ToggleSwitch {
+                checked: SettingsService.dockEverywhere
+                onToggled: checked => SettingsService.set("dockEverywhere", checked)
+            }
+        }
     }
 
     SettingGroup {
         title: Tr.t("Look")
-        note: Tr.t("The capsule's ground, and the icon size everything on the dock scales with.")
-        hint: Tr.t("Background sets how opaque the classic capsule is; lower it to let the blurred wallpaper through.")
-
-        // The dock's own ground, or the bar's.
-        SettingTiles {
-            label: Tr.t("Ground")
-            reading: SettingsService.dockGround === "" ? Tr.t("As the bar")
-                : Theme.dockGlass ? Tr.t("The terminal's glass, over a blur") : Tr.t("Solid black")
-            locked: root.off
-            reason: root.offReason
-
-            Repeater {
-                model: [
-                    { id: "", label: "As the bar" },
-                    { id: "classic", label: "Classic" },
-                    { id: "glass", label: "Glass" }
-                ]
-
-                PreviewTile {
-                    id: groundTile
-
-                    required property var modelData
-
-                    stageHeight: 56
-                    caption: Tr.t(groundTile.modelData.label)
-                    selected: SettingsService.dockGround === groundTile.modelData.id
-                    onPicked: SettingsService.set("dockGround", groundTile.modelData.id)
-
-                    GroundSwatch {
-                        anchors.centerIn: parent
-                        style: groundTile.modelData.id === "" ? SettingsService.surfaceStyle
-                            : groundTile.modelData.id
-                    }
-                }
-            }
-        }
+        note: Tr.t("The icon size everything on the dock scales with, and what the capsule is made of.")
+        hint: Tr.t("Classic is solid black, Glass the terminal's tinted ground over a blur of the wallpaper, and Liquid a clear frosted pane. Background sets how opaque the capsule is; lower it to let the blurred wallpaper through.")
 
         SettingSlider {
             label: Tr.t("Icon size")
@@ -184,6 +164,23 @@ SettingsSection {
             onMoved: value => SettingsService.set("dockIconSize", Math.round(value))
         }
 
+        SettingRow {
+            label: Tr.t("Magnify on hover")
+            locked: root.off
+            reason: root.offReason
+
+            ToggleSwitch {
+                checked: SettingsService.dockMagnify
+                onToggled: checked => SettingsService.set("dockMagnify", checked)
+            }
+        }
+
+        GroundRow {
+            key: "dockGround"
+            locked: root.off
+            reason: root.offReason
+        }
+
         SettingSlider {
             label: Tr.t("Background")
             value: SettingsService.dockOpacity
@@ -191,16 +188,28 @@ SettingsSection {
             to: 100
             stepSize: 5
             unit: "%"
-            // A see-through ground sets it.
-            locked: root.off || !Theme.dockSolid
-            reason: root.off ? root.offReason : Tr.t("Choose the Classic ground above to change it")
+            locked: root.off
+            reason: root.offReason
             onMoved: value => SettingsService.set("dockOpacity", Math.round(value))
+        }
+
+        SettingRow {
+            label: Tr.t("Shadow")
+            reading: SettingsService.dockShadow
+                ? Tr.t("Lifted off the wallpaper") : Tr.t("Flat")
+            locked: root.off
+            reason: root.offReason
+
+            ToggleSwitch {
+                checked: SettingsService.dockShadow
+                onToggled: checked => SettingsService.set("dockShadow", checked)
+            }
         }
     }
 
     SettingGroup {
         title: Tr.t("Behaviour")
-        note: Tr.t("What else the dock shows, and which screens it is on.")
+        note: Tr.t("What else the dock shows, and when it hides.")
         hint: Tr.t("The launcher button opens the island's launcher, and open applications appear after a divider while they run. Windows and widgets pass under the dock, so moving or hiding it moves nothing else.")
 
         SettingRow {
@@ -226,20 +235,6 @@ SettingsSection {
         }
 
         SettingRow {
-            label: Tr.t("On every screen")
-            reading: SettingsService.dockEverywhere
-                ? Tr.t("One on each, all showing the same")
-                : Tr.t("Only on the screen you are on")
-            locked: root.off || root.screens < 2
-            reason: root.off ? root.offReason : Tr.t("Only one screen is on")
-
-            ToggleSwitch {
-                checked: SettingsService.dockEverywhere
-                onToggled: checked => SettingsService.set("dockEverywhere", checked)
-            }
-        }
-
-        SettingRow {
             label: Tr.t("Hide until pointed at")
             locked: root.off
             reason: root.offReason
@@ -255,7 +250,7 @@ SettingsSection {
     SettingGroup {
         title: Tr.t("Kept on it")
         note: Tr.t("These stay whether they are running or not, and they lead the launcher's list too.")
-        hint: Tr.t("Their order is set by dragging them on the dock, and right-clicking a dock icon also keeps or removes it. The launcher uses this list too, so it stays editable with the dock off.")
+        hint: Tr.t("Their order is set by dragging them on the dock, and right-clicking a dock icon also keeps or removes it. The launcher puts them first, so the list stays editable with the dock off.")
 
         KeptApplications {}
     }

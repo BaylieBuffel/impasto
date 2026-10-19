@@ -29,15 +29,20 @@ ColumnLayout {
 
     signal closed()
 
-    // Every workspace up to the maximum, not only those with a dot on the bar.
-    readonly property int columns: Math.min(5, SettingsService.workspaceMax)
-    readonly property int rows: Math.ceil(SettingsService.workspaceMax / root.columns)
+    // Every workspace up to the maximum, not only those with a dot on the bar;
+    // per screen, this screen's own.
+    readonly property int count: HyprlandService.maximum
+    readonly property int columns: Math.min(5, root.count)
+    readonly property int rows: Math.ceil(root.count / root.columns)
     readonly property int gap: 10
 
     // The screen this panel is on. It decides the shape of a cell; what a cell
     // MODELS is the screen its own workspace is on, which is not always this
     // one (`areaOf`).
     readonly property string screenName: root.QsWindow.window?.screen?.name ?? ""
+    readonly property int base: HyprlandService.baseOn(root.screenName)
+    readonly property int activeId: HyprlandService.activeOn(root.screenName)
+        || HyprlandService.activeId
     readonly property var monitor: root.monitorNamed(root.screenName)
         ?? HyprlandService.monitors[0] ?? null
 
@@ -100,11 +105,11 @@ ColumnLayout {
     property int selectedId: 1
 
     // Left and right by one, up and down by a row, wrapping modulo the count.
-    // That also keeps a short last row in range, since `workspaceMax` need not
+    // That also keeps a short last row in range, since the count need not
     // divide by the column count.
     function selectBy(delta: int): void {
-        const count = SettingsService.workspaceMax
-        root.selectedId = (root.selectedId - 1 + delta + count) % count + 1
+        const own = root.selectedId - root.base
+        root.selectedId = root.base + (own - 1 + delta + root.count) % root.count + 1
     }
 
     function activate(): void {
@@ -127,8 +132,8 @@ ColumnLayout {
         HyprlandService.loadClients()
         HyprlandService.loadMonitors()
         void ToplevelManager.toplevels
-        root.selectedId = Math.min(Math.max(1, HyprlandService.activeId),
-                                   SettingsService.workspaceMax)
+        root.selectedId = root.base + Math.min(Math.max(1, root.activeId - root.base),
+                                               root.count)
         root.forceActiveFocus()
     }
 
@@ -187,15 +192,15 @@ ColumnLayout {
             columnSpacing: root.gap
 
             Repeater {
-                model: SettingsService.workspaceMax
+                model: root.count
 
                 Item {
                     id: cell
 
                     required property int index
 
-                    readonly property int workspaceId: cell.index + 1
-                    readonly property bool focused: HyprlandService.activeId === cell.workspaceId
+                    readonly property int workspaceId: root.base + cell.index + 1
+                    readonly property bool focused: root.activeId === cell.workspaceId
                     readonly property bool selected: root.selectedId === cell.workspaceId
                     readonly property var windows: HyprlandService.clientsOn(cell.workspaceId)
                     readonly property bool empty: cell.windows.length === 0
@@ -375,7 +380,7 @@ ColumnLayout {
                                         width: Math.min(26, parent.width * 0.5)
                                         height: width
                                         visible: root.toplevelFor(thumb.modelData) === null
-                                        source: Quickshell.iconPath(thumb.modelData.class, true)
+                                        source: Theme.appIcon(thumb.modelData.class)
                                         sourceSize.width: 52
                                         sourceSize.height: 52
                                     }
@@ -454,7 +459,7 @@ ColumnLayout {
                     // when a cell empties.
                     Text {
                         anchors.centerIn: parent
-                        text: cell.workspaceId
+                        text: cell.index + 1
                         font.family: Theme.fontFamily
                         font.pixelSize: Math.round(cell.height * 0.44)
                         font.weight: Font.DemiBold

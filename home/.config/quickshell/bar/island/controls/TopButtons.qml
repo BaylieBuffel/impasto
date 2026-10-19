@@ -51,10 +51,10 @@ RowLayout {
             color: {
                 if (button.isArmed)
                     return Theme.red
-                return mouse.containsMouse ? Theme.surfaceHoverIn(QsWindow.window) : "transparent"
+                return mouse.containsMouse ? Theme.surfaceHoverIn(QsWindow.window) : Qt.alpha(Theme.surfaceHoverIn(QsWindow.window), 0)
             }
             border.color: button.isArmed ? Theme.red
-                : (mouse.containsMouse ? Theme.borderIn(QsWindow.window) : "transparent")
+                : (mouse.containsMouse ? Theme.borderIn(QsWindow.window) : Qt.alpha(Theme.borderIn(QsWindow.window), 0))
             border.width: 1
 
             Behavior on Layout.preferredWidth {

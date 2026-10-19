@@ -122,7 +122,7 @@ Row {
         Item {
             id: cast
 
-            visible: SettingsService.barShadow && !group.chromeless
+            visible: Theme.barShadowShown && !group.chromeless
             x: -shadow.reach
             y: -shadow.reach
             width: group.width + 2 * shadow.reach

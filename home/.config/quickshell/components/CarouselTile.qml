@@ -31,8 +31,9 @@ Item {
     scale: root.strip.scaleOf(root.distance)
     visible: Math.abs(root.distance) < root.strip.reach
     // Tiles nearer the centre stack on top, so a sliding neighbour never
-    // overlaps the centred tile.
-    z: -Math.abs(root.distance)
+    // overlaps the centred tile. Kept above zero: a child below it is reached
+    // after the strip's own handlers, whose drag would take its clicks.
+    z: 100 - Math.abs(root.distance)
 
     MouseArea {
         id: mouse

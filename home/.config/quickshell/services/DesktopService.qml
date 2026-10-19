@@ -109,7 +109,8 @@ Singleton {
             volume: ["2x2", "4x2"],                 brightness: ["2x2", "4x2"],
             network: ["2x2", "4x2"],                bluetooth: ["2x2", "4x2"],
             weather: ["2x2", "4x2", "4x4", "8x2"],  stats: ["2x2", "4x2", "4x4"],
-            github: ["2x2", "4x2", "8x2"],
+            github: ["2x2", "4x2", "8x2"],          markets: ["2x2", "4x2", "4x4", "8x2"],
+            screentime: ["2x2", "4x2", "4x4", "8x2"],
             updates: ["2x2", "4x2"],                pet: ["2x2", "4x2"],
             games: ["2x2", "4x2"],                  calendar: ["2x2", "4x2", "4x4"],
             notes: ["2x2", "4x2", "4x4", "8x2"],    tasks: ["2x2", "4x2", "4x4"],
@@ -123,7 +124,8 @@ Singleton {
             volume: ["2x2", "4x2"],                 brightness: ["2x2", "4x2"],
             network: ["2x2", "4x2"],                bluetooth: ["2x2", "4x2"],
             weather: ["2x2", "4x2", "4x4", "8x2"],  stats: ["2x2", "4x2", "4x4"],
-            github: ["2x2", "4x2", "8x2"],
+            github: ["2x2", "4x2", "8x2"],          markets: ["2x2", "4x2"],
+            screentime: ["2x2", "4x2", "4x4"],
             updates: ["2x2", "4x2"],                pet: ["2x2", "4x2"],
             games: ["2x2", "4x2"],                  calendar: ["2x2", "4x2", "4x4"],
             notes: ["2x2", "4x2", "4x4", "8x2"],    tasks: ["2x2", "4x2", "4x4"],
@@ -142,7 +144,8 @@ Singleton {
             volume: ["2x2", "4x2"],                 brightness: ["2x2", "4x2"],
             network: ["2x2", "4x2"],                bluetooth: ["2x2", "4x2"],
             weather: ["2x2", "4x2", "8x2"],         stats: ["2x2", "4x2"],
-            github: ["2x2", "4x2", "8x2"],
+            github: ["2x2", "4x2", "8x2"],          markets: ["2x2", "4x2"],
+            screentime: ["2x2", "4x2"],
             updates: ["2x2", "4x2"],                pet: ["2x2", "4x2"],
             games: ["2x2", "4x2"],                  calendar: ["2x2", "4x2", "4x4"],
             notes: ["2x2", "4x2", "4x4", "8x2"],    tasks: ["2x2", "4x2", "4x4"],
@@ -1255,9 +1258,8 @@ Singleton {
     // ── APPEARANCE ──────────────────────────────────────────────────────────
     //
     // Opacity, like theme, defaults to the desktop setting unless the row
-    // overrides it; it is the solid ground's (`Theme.deskSolid`), since on glass a
-    // capsule is the island's material. Colours always come from the active
-    // palette.
+    // overrides it, and thins either ground. Colours always come from the
+    // active palette.
 
     // Notes draw their own paper, photos are their picture, the spectrum is
     // its bars and a sticker is cut out of nothing: no capsule.
@@ -1265,10 +1267,6 @@ Singleton {
         return !!widget && (widget.id === "notes" || widget.id === "photo" || widget.id === "spectrum"
             || root.themeOf(widget) === "sticker")
     }
-
-    // Whether any widget on the desk draws a capsule, and so has a use for
-    // the ground and the opacity.
-    readonly property bool capsuled: root.widgets.some(widget => !root.bare(widget))
 
     function opacityOf(widget: var): int {
         const own = widget ? widget.opacity : undefined

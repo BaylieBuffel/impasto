@@ -26,15 +26,34 @@ EditTray {
     // island.
     required property Item host
 
-    // Where the card starts: under the island, handed in by the bar.
+    // Where the card stands, handed in by the bar: centred under the island,
+    // or beside it from `homeLeft`, with as many columns as `room` takes and
+    // `tall` high. It is neither moved nor resized: only the desktop's is.
     property real homeTop: 0
+    property real homeLeft: -1
+    property real room: 0
+    property real tall: 0
 
     // The block being dragged out of the card, or empty.
     property string pulling: ""
 
+    // What a block is for, in the order the card shows them.
+    groups: [
+        { id: "controls", label: "Controls" },
+        { id: "glance", label: "At a glance" },
+        { id: "personal", label: "Personal" }
+    ]
+    readonly property var groupOf: ({
+        toggles: "controls", volume: "controls", brightness: "controls", media: "controls",
+        appearance: "controls", session: "controls", shortcuts: "controls",
+        clock: "glance", calendar: "glance", weather: "glance", notifications: "glance",
+        notes: "personal", tasks: "personal", pet: "personal", games: "personal", impasto: "personal"
+    })
+
     entries: ControlsService.catalogue.map(entry => {
         const shape = ControlsService.parse(root.smallest(entry.id))
-        return { id: entry.id, name: entry.name, cols: shape.cols, rows: shape.rows }
+        return { id: entry.id, name: entry.name, cols: shape.cols, rows: shape.rows,
+            group: root.groupOf[entry.id] ?? "personal" }
     })
     unitWidth: Theme.centreCellWidth
     unitHeight: Theme.centreCellHeight
@@ -42,15 +61,15 @@ EditTray {
     // A block is drawn denser than a desktop widget, so it is shown larger
     // than the desktop's three quarters: at nine tenths, six across and five
     // down, the card opens at the desktop card's size.
-    startColumns: 6
+    readonly property bool beside: root.homeLeft >= 0
+    startColumns: root.beside
+        ? Math.max(1, Math.floor((root.room - 2 * root.pad + root.street) / root.strideX)) : 6
     startRows: 5
     factor: 0.9
-    homeX: (root.width - root.card.width) / 2
+    homeX: root.beside ? root.homeLeft : (root.width - root.card.width) / 2
     homeY: root.homeTop
-    at: ControlsService.galleryAt
-    onMoved: (x, y) => ControlsService.galleryAt = { x: x, y: y }
-    size: ControlsService.gallerySize
-    onResized: (columns, rows) => ControlsService.gallerySize = { columns: columns, rows: rows }
+    fixed: true
+    fixedHeight: root.beside ? root.tall : 0
     receiving: ControlsService.dragging !== "" && ControlsService.landing === null
 
     function smallest(id: string): string {

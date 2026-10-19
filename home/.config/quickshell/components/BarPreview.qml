@@ -11,6 +11,7 @@ import QtQuick
 
 import Quickshell
 import "../theme"
+import "../services"
 
 // A thumbnail of a screen with the bar on it, showing only what the bar
 // settings change: whether the island touches the top edge, where the sides
@@ -24,7 +25,8 @@ Item {
     // One of `SettingsService.barStyles`.
     property string barStyle: "grouped"
 
-    readonly property bool grouped: root.barStyle !== "spread" && root.barStyle !== "island"
+    readonly property bool bezel: root.barStyle === "bezel"
+    readonly property bool grouped: root.barStyle !== "spread" && root.barStyle !== "island" && !root.bezel
     readonly property bool unified: root.barStyle === "island"
 
     implicitWidth: 108
@@ -64,10 +66,39 @@ Item {
             color: Theme.surfaceIn(QsWindow.window)
         }
 
+        // The bezel: a band across the top edge, the screen's corners curving
+        // under its ends when the screen is rounded.
+        Rectangle {
+            id: frame
+
+            visible: root.bezel
+            x: screen.border.width
+            y: screen.border.width
+            width: screen.width - 2 * screen.border.width
+            height: screen.band + screen.inset
+            topLeftRadius: screen.radius
+            topRightRadius: screen.radius
+            color: Theme.surfaceIn(QsWindow.window)
+        }
+
+        Repeater {
+            model: root.bezel && SettingsService.screenCorners ? [0, 90] : []
+
+            ScreenCorner {
+                required property int modelData
+
+                size: screen.radius
+                x: modelData === 0 ? frame.x : frame.x + frame.width - width
+                y: frame.y + frame.height
+                turn: modelData
+                color: frame.color
+            }
+        }
+
         // The two sides: against the island when grouped, at the edges when
         // spread.
         Rectangle {
-            visible: !root.unified
+            visible: !root.unified && !root.bezel
             x: root.grouped
                 ? (screen.width - screen.islandWidth) / 2 - screen.gap - width
                 : 6
@@ -79,7 +110,7 @@ Item {
         }
 
         Rectangle {
-            visible: !root.unified
+            visible: !root.unified && !root.bezel
             x: root.grouped
                 ? (screen.width + screen.islandWidth) / 2 + screen.gap
                 : screen.width - 6 - width
@@ -90,15 +121,17 @@ Item {
             color: Theme.surfaceIn(QsWindow.window)
         }
 
-        // The island.
+        // The island; the bezel's is always cut into the edge.
         Rectangle {
+            readonly property bool cut: root.attached || root.bezel
+
             anchors.horizontalCenter: parent.horizontalCenter
-            y: root.attached ? 0 : screen.inset
+            y: cut ? 0 : screen.inset
             width: screen.islandWidth
-            height: screen.band + (root.attached ? screen.inset : 0)
+            height: screen.band + (cut ? screen.inset : 0)
             radius: height / 2
-            topLeftRadius: root.attached ? 0 : radius
-            topRightRadius: root.attached ? 0 : radius
+            topLeftRadius: cut ? 0 : radius
+            topRightRadius: cut ? 0 : radius
             color: Theme.accent
         }
     }

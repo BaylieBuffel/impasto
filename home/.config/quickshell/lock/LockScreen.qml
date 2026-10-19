@@ -11,6 +11,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 
+import "../components"
 import "../services"
 
 // The compositor's lock, through ext-session-lock. The compositor hides
@@ -30,6 +31,7 @@ WlSessionLock {
 
     WlSessionLockSurface {
         id: surface
+        CornerGuard {}
 
         LockSurface {
             anchors.fill: parent

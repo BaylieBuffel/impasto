@@ -61,7 +61,7 @@ Rectangle {
                     : Math.max(64, label.implicitWidth + 20)
                 radius: Theme.radiusSmall - 2
                 color: segment.active ? Theme.accent
-                    : (segmentMouse.containsMouse ? Theme.borderIn(QsWindow.window) : "transparent")
+                    : (segmentMouse.containsMouse ? Theme.borderIn(QsWindow.window) : Qt.alpha(Theme.borderIn(QsWindow.window), 0))
 
                 Behavior on color { ColorAnimation { duration: Theme.durationFast } }
 

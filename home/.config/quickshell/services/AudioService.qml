@@ -130,7 +130,7 @@ Singleton {
     function streamIcon(node: var): string {
         const props = node.properties ?? {}
         const named = props["application.icon-name"] || props["application.process.binary"] || ""
-        return named !== "" ? Quickshell.iconPath(named.toLowerCase(), true) : ""
+        return named !== "" ? Theme.appIcon(named.toLowerCase()) : ""
     }
 
     function setStreamVolume(node: var, percent: int): void {

@@ -67,7 +67,7 @@ Rectangle {
                 height: 30
                 radius: Theme.radiusSmall
                 color: row.active ? Theme.islandSurfaceHover
-                    : (rowMouse.containsMouse ? Theme.islandBorder : "transparent")
+                    : (rowMouse.containsMouse ? Theme.islandBorder : Qt.alpha(Theme.islandBorder, 0))
 
                 Behavior on color { ColorAnimation { duration: Theme.durationFast } }
 

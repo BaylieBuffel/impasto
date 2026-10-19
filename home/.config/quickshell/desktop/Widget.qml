@@ -142,7 +142,7 @@ Item {
         readonly property int reach: Theme.shadowRange + 4
         readonly property bool cut: !Theme.deskSolid || root.solidity < 1
 
-        visible: SettingsService.widgetShadow && !root.onPicture
+        visible: Theme.widgetShadowShown && !root.onPicture
             && (!Theme.deskSolid || root.solidity > 0)
         x: -cast.reach
         y: -cast.reach
@@ -219,7 +219,7 @@ Item {
 
         anchors.fill: parent
         anchors.margins: -reach
-        layer.enabled: root.sticker ? SettingsService.widgetShadow
+        layer.enabled: root.sticker ? Theme.widgetShadowShown
             : root.onPicture && root.moduleId !== "spectrum"
         layer.effect: MultiEffect {
             shadowEnabled: true
@@ -247,7 +247,7 @@ Item {
                 radius: Theme.desktopRadius
                 color: Theme.deskSolid
                     ? Qt.rgba(root.ink.ground.r, root.ink.ground.g, root.ink.ground.b, root.solidity)
-                    : Theme.groundOf(Theme.deskStyle)
+                    : Theme.groundAt(Theme.deskStyle, root.solidity)
                 border.color: Theme.deskSolid ? root.rim : Theme.rimOf(Theme.deskStyle)
                 border.width: 1
 
@@ -256,6 +256,7 @@ Item {
 
             GlassSheen {
                 shape: capsule
+                style: Theme.deskStyle
                 visible: Theme.deskGlass && !root.onPicture
             }
 
@@ -332,6 +333,11 @@ Item {
                 DesktopService.selected = ""
                 return
             }
+            // Asked before the drag ends: the strip that removes is only
+            // there while something is carried.
+            const pointer = root.board.mapFromItem(
+                null, drag.centroid.scenePosition.x, drag.centroid.scenePosition.y)
+            const removed = DesktopService.overTray(root.screenName, pointer.x, pointer.y)
             DesktopService.dragging = ""
             DesktopService.landing = null
             DeckService.receiving = ""
@@ -339,9 +345,7 @@ Item {
             // edge joins that edge's deck, and a spectrum becomes the bars
             // along it; otherwise it goes to the cell under the pointer. `place` falls back to the nearest free cell or the
             // original one, and the binding above moves it there.
-            const pointer = root.board.mapFromItem(
-                null, drag.centroid.scenePosition.x, drag.centroid.scenePosition.y)
-            if (DesktopService.overTray(root.screenName, pointer.x, pointer.y)) {
+            if (removed) {
                 DesktopService.remove(root.key)
                 return
             }
@@ -399,8 +403,12 @@ Item {
             ? { screen: root.screenName, col: spot.col, row: spot.row, family: root.family } : null
     }
 
-    onXChanged: root.aim()
-    onYChanged: root.aim()
+    // The pointer rather than the widget: held against the board's edge the
+    // widget stops while the pointer goes on, onto the strip below it.
+    Connections {
+        target: drag
+        function onCentroidChanged() { root.aim() }
+    }
 
     // Dragged or resized, it keeps the card on this screen until it is let go.
     Binding {

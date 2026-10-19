@@ -1,0 +1,270 @@
+# ╭──────────────────────────────────────────────────────────────────────────╮
+# │                                                                          │
+# │   I M P A S T O                                                          │
+# │   boot splash · the board, its paint as progress, the disk password      │
+# │                                                                          │
+# │   github.com/andreumassanet/impasto                                      │
+# │                                                                          │
+# ╰──────────────────────────────────────────────────────────────────────────╯
+
+# The login screen's painting, blurred, with the palette board in the middle.
+# A daub of paint lands on the board for every fifth of the boot; a disk
+# password lifts the board and brings the field in underneath.
+# The pictures are drawn at twice a 1080-line screen and scaled to this one.
+
+
+# ── SCREEN ──────────────────────────────────────────────────────────────────
+
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
+
+screen.x = Window.GetX();
+screen.y = Window.GetY();
+screen.w = Window.GetWidth();
+screen.h = Window.GetHeight();
+screen.cx = screen.x + screen.w / 2;
+screen.cy = screen.y + screen.h / 2;
+
+# One design pixel, on a 1920 × 1080 screen.
+u = Math.Min(screen.w / 1920, screen.h / 1080);
+
+fun fit(image) {
+    return image.Scale(Math.Int(image.GetWidth() * u / 2), Math.Int(image.GetHeight() * u / 2));
+}
+
+mode = Plymouth.GetMode();
+leaving = (mode == "shutdown" || mode == "reboot");
+
+# Covers the screen, cropped like the login screen's.
+background.source = Image("background.png");
+background.k = Math.Max(screen.w / background.source.GetWidth(), screen.h / background.source.GetHeight());
+background.image = background.source.Scale(
+    Math.Int(background.source.GetWidth() * background.k),
+    Math.Int(background.source.GetHeight() * background.k));
+background.sprite = Sprite(background.image);
+background.sprite.SetPosition(
+    screen.x + (screen.w - background.image.GetWidth()) / 2,
+    screen.y + (screen.h - background.image.GetHeight()) / 2, -100);
+if (leaving)
+    background.sprite.SetOpacity(0.75);
+
+
+# ── THE MARK ────────────────────────────────────────────────────────────────
+#
+# Board, paint and name as one column, 453 design pixels tall. Its top moves
+# between `rest` and `raised`.
+
+mark.rest = screen.cy - 236 * u;
+mark.raised = Math.Max(screen.cy - 403 * u, screen.y + 72 * u);
+mark.top = mark.rest;
+
+glow.image = Image("glow.png").Scale(Math.Int(1100 * u), Math.Int(1100 * u));
+glow.sprite = Sprite(glow.image);
+
+board.image = fit(Image("board.png"));
+board.sprite = Sprite(board.image);
+board.pad = 30 * u;
+
+word.image = fit(Image("wordmark.png"));
+word.sprite = Sprite(word.image);
+word.pad = 15 * u;
+
+# Daub centres on the 1254-pixel board, the shell's own geometry.
+paint[0].x = 280; paint[0].y = 650;
+paint[1].x = 340; paint[1].y = 480;
+paint[2].x = 450; paint[2].y = 340;
+paint[3].x = 620; paint[3].y = 250;
+paint[4].x = 800; paint[4].y = 225;
+
+daub.size = 60 * u;
+for (i = 0; i < 5; i++) {
+    paint[i].source = Image("daub-" + (i + 1) + ".png");
+    paint[i].image = paint[i].source.Scale(Math.Int(daub.size), Math.Int(daub.size));
+    paint[i].sprite = Sprite();
+    paint[i].sprite.SetZ(10);
+    paint[i].landed = -1;
+    paint[i].settled = 0;
+    paint[i].scale = 1;
+}
+
+fun place_mark() {
+    local.left = screen.cx - 160 * u;
+    glow.sprite.SetPosition(screen.cx - glow.image.GetWidth() / 2,
+        mark.top + 226 * u - glow.image.GetHeight() / 2, -50);
+    board.sprite.SetPosition(screen.cx - board.image.GetWidth() / 2, mark.top - board.pad, 0);
+    word.sprite.SetPosition(screen.cx - word.image.GetWidth() / 2, mark.top + 286 * u - word.pad, 5);
+    for (local.i = 0; local.i < 5; local.i++) {
+        local.side = daub.size * paint[local.i].scale;
+        paint[local.i].sprite.SetX(local.left + paint[local.i].x / 1254 * 320 * u - local.side / 2);
+        paint[local.i].sprite.SetY(mark.top + paint[local.i].y / 1254 * 320 * u - local.side / 2);
+    }
+}
+
+
+# ── LEAVING ─────────────────────────────────────────────────────────────────
+
+if (leaving) {
+    if (mode == "reboot")
+        farewell.image = fit(Image("label-reboot.png"));
+    else
+        farewell.image = fit(Image("label-down.png"));
+    farewell.sprite = Sprite(farewell.image);
+    farewell.sprite.SetPosition(screen.cx - farewell.image.GetWidth() / 2,
+        mark.rest + 479 * u, 5);
+}
+
+
+# ── PASSWORD ────────────────────────────────────────────────────────────────
+
+pill.image = fit(Image("pill.png"));
+pill.sprite = Sprite(pill.image);
+pill.x = screen.cx - pill.image.GetWidth() / 2;
+pill.y = screen.cy + 120 * u;
+pill.sprite.SetPosition(pill.x, pill.y, 20);
+
+prompt.image = fit(Image("label-disk.png"));
+prompt.sprite = Sprite(prompt.image);
+prompt.sprite.SetPosition(screen.cx - prompt.image.GetWidth() / 2,
+    pill.y - 14 * u - prompt.image.GetHeight(), 20);
+
+dot.image = fit(Image("bullet.png"));
+dot.step = 13 * u;
+dot.most = Math.Int((380 - 72 - 64) / 13);
+dots = 0;
+
+# 0 booting, 1 asking; `asked` eases towards `asking`.
+asking = 0;
+asked = 0;
+
+fun show_dots() {
+    for (local.i = 0; local.i < dot.most; local.i++) {
+        if (!dot[local.i].sprite) {
+            dot[local.i].sprite = Sprite(dot.image);
+            dot[local.i].sprite.SetPosition(pill.x + 72 * u + local.i * dot.step,
+                pill.y + 30 * u - dot.image.GetHeight() / 2, 21);
+        }
+        if (local.i < dots)
+            dot[local.i].sprite.SetOpacity(asked);
+        else
+            dot[local.i].sprite.SetOpacity(0);
+    }
+}
+
+fun place_asking() {
+    local.e = 1 - (1 - asked) * (1 - asked) * (1 - asked);
+    mark.top = mark.rest + (mark.raised - mark.rest) * local.e;
+    pill.sprite.SetOpacity(asked);
+    prompt.sprite.SetOpacity(asked);
+    show_dots();
+    place_mark();
+}
+
+fun password_callback(text, bullets) {
+    global.asking = 1;
+    global.dots = bullets;
+    show_dots();
+}
+
+fun normal_callback() {
+    global.asking = 0;
+}
+
+Plymouth.SetDisplayPasswordFunction(password_callback);
+Plymouth.SetDisplayNormalFunction(normal_callback);
+
+
+# ── PROGRESS ────────────────────────────────────────────────────────────────
+
+clock = 0;
+progress = 0;
+landed = 0;
+last = -1;
+
+fun progress_callback(duration, fraction) {
+    global.progress = fraction;
+}
+
+Plymouth.SetBootProgressFunction(progress_callback);
+
+# Out-back: past the mark and settling, the dab of a loaded brush.
+fun dab(p) {
+    local.q = p - 1;
+    return 1 + 3.2 * local.q * local.q * local.q + 2.2 * local.q * local.q;
+}
+
+fun land(i) {
+    paint[i].landed = clock;
+    global.landed = i + 1;
+    global.last = clock;
+}
+
+fun paint_daubs() {
+    for (local.i = 0; local.i < 5; local.i++) {
+        if (paint[local.i].landed >= 0 && !paint[local.i].settled) {
+            local.age = clock - paint[local.i].landed;
+            local.p = Math.Min(local.age / 0.42, 1);
+            paint[local.i].scale = 1.9 - 0.9 * dab(local.p);
+            local.side = Math.Int(daub.size * paint[local.i].scale);
+            paint[local.i].sprite.SetImage(paint[local.i].source.Scale(local.side, local.side));
+            paint[local.i].sprite.SetOpacity(Math.Min(local.age / 0.22, 1));
+            if (local.p >= 1) {
+                paint[local.i].scale = 1;
+                paint[local.i].sprite.SetImage(paint[local.i].image);
+                paint[local.i].settled = 1;
+            }
+        }
+    }
+}
+
+if (leaving) {
+    for (i = 0; i < 5; i++) {
+        paint[i].sprite.SetImage(paint[i].image);
+        paint[i].settled = 1;
+        landed = 5;
+    }
+}
+
+
+# ── FRAME ───────────────────────────────────────────────────────────────────
+
+fun refresh_callback() {
+    global.clock += 1 / 50;
+    # A fifth of the boot per daub, the last at 5/6, and never two at once.
+    if (landed < 5 && progress >= (landed + 1) / 6 && clock - last >= 0.2)
+        land(landed);
+    paint_daubs();
+    if (asked != asking) {
+        if (asking > asked)
+            global.asked = Math.Min(asked + 1 / (50 * 0.38), 1);
+        else
+            global.asked = Math.Max(asked - 1 / (50 * 0.38), 0);
+        place_asking();
+    }
+    place_mark();
+}
+
+Plymouth.SetRefreshFunction(refresh_callback);
+
+
+# ── MESSAGES ────────────────────────────────────────────────────────────────
+
+message.sprite = Sprite();
+message.sprite.SetZ(30);
+
+fun message_callback(text) {
+    message.image = Image.Text(text, 0.56, 0.56, 0.58);
+    message.sprite.SetImage(message.image);
+    message.sprite.SetPosition(screen.cx - message.image.GetWidth() / 2,
+        screen.y + screen.h - 48 * u - message.image.GetHeight(), 30);
+    message.sprite.SetOpacity(1);
+}
+
+fun hide_message_callback(text) {
+    message.sprite.SetOpacity(0);
+}
+
+Plymouth.SetDisplayMessageFunction(message_callback);
+Plymouth.SetHideMessageFunction(hide_message_callback);
+
+place_asking();
+place_mark();

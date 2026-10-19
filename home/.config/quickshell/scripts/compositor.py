@@ -354,95 +354,6 @@ def install_cursor(hexcolour, size, seed):
     return 0
 
 
-RULES_FILE = os.path.expanduser("~/.config/hypr/modules/windowrules.lua")
-
-
-def parse_lua_table(text, i):
-    """Parse a Lua table literal; returns (entries, end).
-
-    Entries are (key, value) pairs, key None for a positional value, value a
-    string or a nested entry list. Not a Lua parser: it handles only the value
-    types windowrules.lua uses (strings, numbers, booleans and tables).
-    """
-    entries = []
-    key = None
-    i += 1
-    while i < len(text):
-        char = text[i]
-        if char.isspace() or char == ",":
-            i += 1
-            continue
-        if char == "}":
-            return entries, i + 1
-        named = re.match(r"([A-Za-z_][A-Za-z0-9_]*)\s*=", text[i:])
-        if named and key is None:
-            key = named.group(1)
-            i += named.end()
-            continue
-        if char == '"':
-            literal = re.match(r'"((?:[^"\\]|\\.)*)"', text[i:])
-            value = literal.group(1).replace('\\\\', '\\')
-            i += literal.end()
-        elif char == "{":
-            value, i = parse_lua_table(text, i)
-        else:
-            bare = re.match(r"[^,}\s]+", text[i:])
-            value = bare.group(0)
-            i += bare.end()
-        entries.append((key, value))
-        key = None
-    return entries, i
-
-
-def spell_value(value):
-    if isinstance(value, list):
-        parts = [spell_value(entry) for _key, entry in value]
-        if all(re.fullmatch(r"-?\d+", part) for part in parts):
-            return " × ".join(parts)
-        return ", ".join(parts)
-    return str(value)
-
-
-def window_rules():
-    """The rules in windowrules.lua, as shapes a panel can draw. Read-only."""
-    try:
-        with open(RULES_FILE, encoding="utf-8", errors="replace") as handle:
-            source = handle.read()
-    except OSError:
-        return []
-    # Line comments go first; no string in this file carries a "--".
-    source = "\n".join(line.split("--", 1)[0] for line in source.splitlines())
-
-    found = []
-    for opening in re.finditer(r"hl\.window_rule\s*\(\s*\{", source):
-        entries, _end = parse_lua_table(source, opening.end() - 1)
-        name = ""
-        matches = []
-        effects = []
-        for key, value in entries:
-            if key == "name":
-                name = str(value)
-            elif key == "match" and isinstance(value, list):
-                for criterion, wanted in value:
-                    if wanted in ("true", "false"):
-                        matches.append(criterion if wanted == "true"
-                                       else f"not {criterion}")
-                    else:
-                        matches.append(f"{criterion} {spell_value(wanted)}")
-            elif key is not None:
-                shown = key.replace("_", " ")
-                if value == "true":
-                    effects.append(shown)
-                elif value != "false":
-                    effects.append(f"{shown} {spell_value(value)}")
-        found.append({
-            "name": name.replace("-", " "),
-            "match": "  ·  ".join(matches),
-            "effects": effects,
-        })
-    return found
-
-
 def main():
     action = sys.argv[1] if len(sys.argv) > 1 else "get"
 
@@ -462,8 +373,6 @@ def main():
             sys.exit(build_cursor(colour, rest[1], seed=seed))
         sys.stderr.write("Usage: compositor.py cursor <#rrggbb|palette> <size> [--seed]\n")
         sys.exit(1)
-    elif action == "rules":
-        print(json.dumps(window_rules()))
     elif action == "get":
         print(json.dumps({option: get(option, kind) for option, kind in OPTIONS}))
     elif action in ("set", "apply"):
@@ -505,7 +414,7 @@ def main():
         sys.stderr.write(
             "Usage: compositor.py get | set <option> <value> | apply <json>"
             " | layouts | cursor <#rrggbb|palette> <size> [--seed]"
-            " | available plugin:<name>:<option> | rules\n")
+            " | available plugin:<name>:<option>\n")
         sys.exit(1)
 
 

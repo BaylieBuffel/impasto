@@ -28,9 +28,9 @@ Rectangle {
     radius: Theme.radiusSmall
 
     color: root.active ? Theme.accent
-        : (mouse.containsMouse ? Theme.surfaceHoverIn(QsWindow.window) : "transparent")
+        : (mouse.containsMouse ? Theme.surfaceHoverIn(QsWindow.window) : Qt.alpha(Theme.surfaceHoverIn(QsWindow.window), 0))
     border.color: root.active ? Theme.accent
-        : (mouse.containsMouse ? Theme.borderIn(QsWindow.window) : "transparent")
+        : (mouse.containsMouse ? Theme.borderIn(QsWindow.window) : Qt.alpha(Theme.borderIn(QsWindow.window), 0))
     border.width: 1
 
     Behavior on color { ColorAnimation { duration: Theme.durationFast } }

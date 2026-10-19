@@ -428,7 +428,7 @@ ColumnLayout {
                     // this binding is the row.
                     readonly property bool isApp: row.modelData.kind === "app"
                     readonly property string iconSource: badge.isApp && row.modelData.icon
-                        ? Quickshell.iconPath(row.modelData.icon, true) : ""
+                        ? Theme.appIcon(row.modelData.icon) : ""
 
                     // Copied images show a thumbnail: two screenshots often
                     // share a name and a size.

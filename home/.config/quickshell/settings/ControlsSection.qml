@@ -13,6 +13,7 @@ import QtQuick.Layouts
 import "../theme"
 import "../services"
 import "../components"
+import "../bar/island/controls"
 
 // The control centre: its grid's size (also under the island while
 // arranging), the way into arranging it and back to its default, and the
@@ -32,23 +33,13 @@ SettingsSection {
         note: Tr.t("A grid of the size chosen here, arranged on the panel itself.")
         hint: Tr.t("Edit shows the grid, its columns and rows under the island, and a card of every block under them. Drag a block onto the cells, pull a corner or scroll to resize it, and drop it on the card to remove it; a click on a toggles or shortcuts block chooses what it carries. Columns come and go on both sides alike, so the blocks stay centred. Escape leaves, and the right button on the panel enters or leaves without opening settings.")
 
+        // The same picker as under the island while arranging.
         SettingRow {
-            label: Tr.t("Columns")
+            label: Tr.t("Size")
+            reading: Tr.t("Click the cell that should be the grid's corner")
 
-            SegmentedControl {
-                options: [2, 3, 4, 5, 6].map(count => ({ id: `${count}`, label: `${count}` }))
-                current: `${ControlsService.columns}`
-                onSelected: id => ControlsService.resize(parseInt(id), ControlsService.rows)
-            }
-        }
-
-        SettingRow {
-            label: Tr.t("Rows")
-
-            SegmentedControl {
-                options: [2, 3, 4, 5, 6, 7, 8].map(count => ({ id: `${count}`, label: `${count}` }))
-                current: `${ControlsService.rows}`
-                onSelected: id => ControlsService.resize(ControlsService.columns, parseInt(id))
+            GridSize {
+                bare: true
             }
         }
 

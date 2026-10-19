@@ -37,6 +37,9 @@ Item {
     readonly property int rowPiece: root.placed === 0 ? root.piece : Math.min(root.piece,
         Math.floor((root.width - 2 * root.pad - 24 - 4 * (root.placed - 1)) / root.placed))
 
+    // A height to fill: the tray of spare buttons grows down to it.
+    property real fillTo: 0
+
     implicitHeight: column.implicitHeight
 
     function entryOf(id: string): var {
@@ -214,6 +217,8 @@ Item {
 
         // What is under the pointer, else how it works.
         Text {
+            id: hint
+
             width: parent.width
             text: {
                 const shown = root.entryOf(root.held !== "" ? root.held : root.pointed)
@@ -230,7 +235,8 @@ Item {
             id: tray
 
             width: parent.width
-            height: Math.max(spare.implicitHeight, root.piece) + 2 * root.pad
+            height: Math.max(Math.max(spare.implicitHeight, root.piece) + 2 * root.pad,
+                root.fillTo - stage.height - hint.height - 2 * column.spacing)
             radius: Theme.radiusMedium
             color: "transparent"
             border.color: root.overSide === "tray" ? Theme.accent : Theme.hairline

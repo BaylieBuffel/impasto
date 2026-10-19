@@ -12,6 +12,7 @@ import Quickshell
 import Quickshell.Wayland
 
 import "../theme"
+import "../components"
 import "../services"
 
 // The capture surface: a screenshot taken by grim when the key was pressed,
@@ -24,6 +25,7 @@ import "../services"
 // started on.
 PanelWindow {
     id: root
+    CornerGuard {}
 
     // The window under the pointer in window mode, the dragged box in region
     // mode.

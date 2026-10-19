@@ -189,7 +189,7 @@ ColumnLayout {
                             visible: !entry.modelData.heading
                             anchors.fill: parent
                             radius: Theme.radiusSmall
-                            color: rowHover.hovered ? Theme.surfaceIn(QsWindow.window) : "transparent"
+                            color: rowHover.hovered ? Theme.surfaceIn(QsWindow.window) : Qt.alpha(Theme.surfaceIn(QsWindow.window), 0)
 
                             Behavior on color { ColorAnimation { duration: Theme.durationFast } }
 

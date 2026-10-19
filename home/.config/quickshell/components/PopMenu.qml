@@ -62,7 +62,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Theme.dockMenuRow
                 radius: Theme.radiusSmall
-                color: rowMouse.containsMouse ? Theme.surfaceHoverIn(QsWindow.window) : "transparent"
+                color: rowMouse.containsMouse ? Theme.surfaceHoverIn(QsWindow.window) : Qt.alpha(Theme.surfaceHoverIn(QsWindow.window), 0)
 
                 Behavior on color { ColorAnimation { duration: Theme.durationFast } }
 

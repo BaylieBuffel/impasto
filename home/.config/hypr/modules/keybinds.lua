@@ -187,30 +187,71 @@ hl.on("workspace.active", function(workspace)
     showing[name] = workspace.id
 end)
 
+-- Shared, or each screen with ten of its own: the shell writes the mode and
+-- the screens' order to a file, read on every press so a change needs no
+-- reload. The screens in order when each has its own, nil when shared.
+local function screen_order()
+    local state = os.getenv("XDG_STATE_HOME") or (os.getenv("HOME") .. "/.local/state")
+    local file  = io.open(state .. "/quickshell/workspaces")
+    if not file then
+        return nil
+    end
+    local lines = {}
+    for line in file:lines() do
+        if line ~= "" and line:sub(1, 1) ~= "#" then
+            lines[#lines + 1] = line
+        end
+    end
+    file:close()
+    if lines[1] ~= "screen" then
+        return nil
+    end
+    return { table.unpack(lines, 2) }
+end
+
+-- The workspace before this screen's first; 0 when they are shared.
+local function screen_base(monitor)
+    local order = monitor and screen_order()
+    for position, name in ipairs(order or {}) do
+        if name == monitor.name then
+            return (position - 1) * 10
+        end
+    end
+    return 0
+end
+
 -- The number of the workspace already here goes back to the one before it.
 local function to_workspace(index)
     return function()
         local monitor = hl.get_active_monitor()
         local active  = hl.get_active_workspace()
         local back    = monitor and before[monitor.name]
-        local target  = index
-        if active and active.id == index and back and back ~= index then
+        local target  = screen_base(monitor) + index
+        if active and active.id == target and back and back ~= target then
             target = back
         end
         hl.dispatch(hl.dsp.focus({ workspace = target, on_current_monitor = true }))
     end
 end
 
+-- Into this screen's own ten, or the shared ten.
+local function move_to_workspace(index)
+    return function()
+        local monitor = hl.get_active_monitor()
+        hl.dispatch(hl.dsp.window.move({ workspace = screen_base(monitor) + index }))
+    end
+end
+
 -- · SUPER + [1-9,0] switches; adding SHIFT moves the window there
 --
--- The ten are shared by every screen, and a number brings its workspace to
--- the screen you are on rather than taking you to the screen it is on:
--- `on_current_monitor` swaps the two screens' workspaces where it has to.
+-- Shared, a number brings its workspace to the screen you are on rather than
+-- taking you to the screen it is on: `on_current_monitor` swaps the two
+-- screens' workspaces where it has to. Per screen, it is this screen's own.
 for i = 1, 10 do
     local key = i % 10  -- 10 maps to the 0 key
     bind(mainMod .. " + " .. key,         to_workspace(i),
          { description = "Workspaces · Go to workspace " .. i })
-    bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }),
+    bind(mainMod .. " + SHIFT + " .. key, move_to_workspace(i),
          { description = "Workspaces · Move the window to workspace " .. i })
 end
 
@@ -229,7 +270,8 @@ bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "m-1" }), { descript
 -- workspace. Moving it instead buries the other screen's workspace behind
 -- this one and leaves a new empty one where you were. The direction is
 -- resolved by moving the keyboard first: nothing that way leaves it where it
--- was and changes nothing.
+-- was and changes nothing. With ten workspaces each, the windows trade and
+-- the workspaces stay, so every screen keeps its own numbers.
 local function trade_workspace(direction)
     return function()
         local here = hl.get_active_monitor()
@@ -244,7 +286,23 @@ local function trade_workspace(direction)
             return
         end
 
-        hl.dispatch(hl.dsp.workspace.swap_monitors({ monitor1 = here.name, monitor2 = there.name }))
+        if not screen_order() then
+            hl.dispatch(hl.dsp.workspace.swap_monitors({ monitor1 = here.name, monitor2 = there.name }))
+            return
+        end
+
+        local from, to = here.active_workspace, there.active_workspace
+        if not from or not to then
+            return
+        end
+        local leaving  = hl.get_workspace_windows(from.id) or {}
+        local arriving = hl.get_workspace_windows(to.id) or {}
+        for _, window in ipairs(leaving) do
+            hl.dispatch(hl.dsp.window.move({ workspace = to.id, window = "address:" .. window.address, follow = false }))
+        end
+        for _, window in ipairs(arriving) do
+            hl.dispatch(hl.dsp.window.move({ workspace = from.id, window = "address:" .. window.address, follow = false }))
+        end
     end
 end
 
@@ -323,6 +381,9 @@ bind(mainMod .. " + SHIFT + G", hl.dsp.global("quickshell:game"),       { descri
 -- · packages panel (pacman + AUR); installs run in a terminal
 bind(mainMod .. " + I",         hl.dsp.global("quickshell:packages"),   { description = "Shell · Open the packages" })
 bind(mainMod .. " + SHIFT + M", hl.dsp.global("quickshell:machines"),   { description = "Shell · Open the virtual machines" })
+bind(mainMod .. " + O",         hl.dsp.global("quickshell:servers"),    { description = "Shell · Open the development servers" })
+bind(mainMod .. " + Y",         hl.dsp.global("quickshell:screentime"), { description = "Shell · Open the screen time" })
+bind(mainMod .. " + SHIFT + W", hl.dsp.global("quickshell:camera"),     { description = "Shell · Open the camera effects" })
 
 -- · clipboard history is a launcher mode
 bind(mainMod .. " + V",         hl.dsp.global("quickshell:clipboard"),  { description = "Shell · Open the clipboard history" })

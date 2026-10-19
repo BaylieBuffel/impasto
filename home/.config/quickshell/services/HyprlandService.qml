@@ -24,9 +24,44 @@ import Quickshell.Hyprland
 QtObject {
     id: root
 
-    // Slots always drawn, so the bar keeps a stable width.
-    readonly property int slots: SettingsService.workspaceCount
-    readonly property int maximum: SettingsService.workspaceMax
+    // Each screen its own ten, or every screen the same ones.
+    readonly property bool perScreen: SettingsService.workspaceMode === "screen"
+
+    // Slots always drawn, so the bar keeps a stable width. Per screen, a
+    // screen never reaches into the next one's ten.
+    readonly property int slots: Math.min(SettingsService.workspaceCount, root.maximum)
+    readonly property int maximum: root.perScreen
+        ? Math.min(SettingsService.workspaceMax, 10) : SettingsService.workspaceMax
+
+    // Per screen, the order the tens are dealt in: the main screen first, so
+    // it keeps 1–10 whatever else is plugged in, then the rest left to right.
+    readonly property var screenOrder: {
+        const main = MonitorService.effectivePrimaryName
+        const rest = Quickshell.screens
+            .filter(screen => screen.name !== main)
+            .sort((a, b) => a.x - b.x || a.y - b.y)
+            .map(screen => screen.name)
+        return main !== "" ? [main].concat(rest) : rest
+    }
+
+    // The workspace before a screen's first; 0 when they are shared.
+    function baseOn(monitor: string): int {
+        return root.perScreen ? Math.max(0, root.screenOrder.indexOf(monitor)) * 10 : 0
+    }
+
+    // The number a screen shows a workspace as: its own are numbered from 1,
+    // and another screen's keep their id.
+    function numberOn(workspaceId: int, monitor: string): int {
+        const own = workspaceId - root.baseOn(monitor)
+        return own >= 1 && own <= 10 ? own : workspaceId
+    }
+
+    // Every workspace a strip may draw on any screen: per screen, every
+    // screen's ten, and past them any that outlived its screen.
+    readonly property int span: root.perScreen
+        ? Math.max(10 * Math.max(1, root.screenOrder.length),
+                   ...root.named.map(workspace => workspace.id))
+        : root.maximum
 
     property int activeId: 1
     property var occupiedIds: []
@@ -77,6 +112,21 @@ QtObject {
         return root.visibleIds.indexOf(workspaceId) >= 0
     }
 
+    // The same on one screen. Per screen, its own slots, its own others while
+    // occupied or active, and another screen's that ended up here, as one
+    // does when its screen is unplugged.
+    function isVisibleOn(workspaceId: int, monitor: string): bool {
+        if (!root.perScreen)
+            return root.isVisible(workspaceId)
+        const own = workspaceId - root.baseOn(monitor)
+        if (own >= 1 && own <= root.slots)
+            return true
+        const used = root.isOccupied(workspaceId) || root.activeOn(monitor) === workspaceId
+        if (own >= 1 && own <= root.maximum)
+            return used
+        return used && root.monitorOf(workspaceId) === monitor
+    }
+
     // Brings the workspace to the screen being worked on rather than taking
     // the keyboard to the screen it is on, which is what the number keys do
     // (`keybinds.lua`). A dot on a bar and a cell in the overview are both
@@ -95,6 +145,58 @@ QtObject {
     function refresh(): void {
         root.workspacesProcess.running = true
         root.activeProcess.running = true
+    }
+
+    // ── WORKSPACES FILE ─────────────────────────────────────────────────────
+    //
+    // The number keys are Hyprland's, so the mode and the order are written
+    // where `keybinds.lua` reads them on every press: the mode on the first
+    // line, then one connector name a line.
+    readonly property string screensHeader:
+        "# How the number keys reach workspaces: shared, or screen followed by\n"
+        + "# the screens in order, ten each. Written by the shell from Settings →\n"
+        + "# Displays and read by hypr/modules/keybinds.lua.\n"
+
+    readonly property string screensText: root.screensHeader
+        + (root.perScreen ? ["screen"].concat(root.screenOrder).join("\n") : "shared") + "\n"
+
+    onScreensTextChanged: root.writeScreens()
+
+    function writeScreens(): void {
+        if (!SettingsService.arrived || !root.screensFile.known)
+            return
+        if (root.screensFile.says === root.screensText)
+            return
+        root.screensFile.says = root.screensText
+        root.screensFile.setText(root.screensText)
+    }
+
+    readonly property FileView screensFile: FileView {
+        property bool known: false
+        property string says: ""
+
+        path: `${SettingsService.stateDirectory}/workspaces`
+        printErrors: false
+
+        onLoaded: {
+            says = text()
+            known = true
+            Qt.callLater(root.writeScreens)
+        }
+        onLoadFailed: {
+            says = ""
+            known = true
+            Qt.callLater(root.writeScreens)
+        }
+        onSaveFailed: error => console.warn("The workspaces file could not be written:", error)
+    }
+
+    readonly property Connections settingsArrive: Connections {
+        target: SettingsService
+
+        function onArrivedChanged(): void {
+            root.writeScreens()
+        }
     }
 
     // ── ON DEMAND ───────────────────────────────────────────────────────────
@@ -150,6 +252,10 @@ QtObject {
     // address without `0x` and an empty string for no window.
     property string focusedAddress: ""
 
+    // Class of the window with keyboard focus, or "". From `activewindow`,
+    // whose data is `class,title`.
+    property string focusedClass: ""
+
     readonly property Process focusedProcess: Process {
         command: ["hyprctl", "activewindow", "-j"]
         running: true
@@ -158,6 +264,8 @@ QtObject {
                 const window = root.parseJson(text)
                 root.focusedAddress = window && typeof window.address === "string"
                     ? window.address : ""
+                root.focusedClass = window && typeof window.class === "string"
+                    ? window.class : ""
             }
         }
     }
@@ -367,6 +475,9 @@ QtObject {
                 break
             // Focus changes only affect the client list, and only watchers
             // need it; skipping it otherwise saves a process per alt-tab.
+            case "activewindow":
+                root.focusedClass = event.data.split(",")[0]
+                break
             case "activewindowv2":
                 root.focusedAddress = event.data === "" ? "" : `0x${event.data}`
                 if (root.watchClients)

@@ -44,7 +44,6 @@ QtObject {
     readonly property int radiusMedium: 12
     readonly property int radiusLarge: 18
     readonly property int radiusPill: 999
-    readonly property int radiusNotch: 6
 
     // ── TYPE ────────────────────────────────────────────────────────────────
 

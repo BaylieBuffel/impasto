@@ -50,6 +50,8 @@ Singleton {
         { id: "bluetooth",     name: "Bluetooth",     bar: true,  width: Theme.cardWidth, height: Theme.cardHeight(3, 0) },
         { id: "notifications", name: "Notifications", bar: true,  desk: false, width: Theme.cardWidth, height: Theme.cardHeight(7, 0) },
         { id: "weather",       name: "Weather",       bar: true,  width: Theme.cardWidth, height: Theme.cardHeight(0, 50) },
+        { id: "markets",       name: "Markets",       bar: true,  width: Theme.cardWidth, height: MarketsService.cardHeight },
+        { id: "screentime",    name: "Screen time",   bar: true,  width: Theme.cardWidth, height: Theme.cardHeight(4, Theme.cardRowGap + 44) },
         { id: "github",        name: "GitHub",        bar: false, width: Theme.cardWidth, height: Theme.cardHeight(0, GithubService.cardGrid) },
         { id: "stats",         name: "System",        bar: true,  width: Theme.cardWidth, height: Theme.cardHeight(2, Theme.cardRowGap + 36) },
         { id: "updates",       name: "Updates",       bar: true,  width: Theme.cardWidth, height: Theme.cardHeight(4, 0) },
@@ -138,6 +140,16 @@ Singleton {
                 WeatherService.subscribe()
             else
                 WeatherService.release()
+        } else if (id === "markets") {
+            if (on)
+                MarketsService.subscribe()
+            else
+                MarketsService.release()
+        } else if (id === "screentime") {
+            if (on)
+                ScreenTimeService.follow()
+            else
+                ScreenTimeService.unfollow()
         } else if (id === "updates") {
             if (on)
                 UpdatesService.subscribe()
@@ -197,6 +209,10 @@ Singleton {
             return BatteryService.icon
         case "weather":
             return WeatherService.glyph || "󰖐"
+        case "markets":
+            return MarketsService.glyph(MarketsService.lead)
+        case "screentime":
+            return "󰔛"
         case "updates":
             return "󰏖"
         case "notifications":
@@ -231,6 +247,11 @@ Singleton {
             return `${BatteryService.percent}%`
         case "weather":
             return WeatherService.available ? `${WeatherService.temperature}°` : "--°"
+        case "markets":
+            return MarketsService.lead
+                ? `${MarketsService.short(MarketsService.lead)} ${MarketsService.change(MarketsService.lead)}` : "—"
+        case "screentime":
+            return ScreenTimeService.short(ScreenTimeService.todayTotal)
         case "updates":
             return `${UpdatesService.count}`
         case "notifications":
@@ -302,6 +323,8 @@ Singleton {
             return ClaudeService.measured ? ClaudeService.tint : Theme.indicator
         case "codex":
             return CodexService.tint
+        case "markets":
+            return MarketsService.tint(MarketsService.lead)
         }
         return Theme.text
     }
@@ -411,9 +434,10 @@ Singleton {
     // the glance by what it adds, measured at the glance's type. The music
     // is wider, for a line of lyrics beside the time; the rest leave their
     // reading 170 px, which a weather line or a machine's state needs.
-    readonly property int summaryWidth: root.glanceFace === "clock"
-        ? root.glanceTime + 2 * (root.glanceMargin + 4)
-        : (root.glanceFace === "media" ? 620 : 560) + root.glanceTime - root.glanceTimeBase
+    // Nothing running and no weather is five days beside the time, 420.
+    readonly property int summaryWidth: (root.glanceFace === "media" ? 620
+            : root.glanceFace === "clock" ? 420 : 560)
+        + root.glanceTime - root.glanceTimeBase
     // Measured again when the type changes: a call is not a dependency.
     readonly property int glanceTimeBase: root.timeMetrics.font.family !== ""
         ? Math.ceil(root.timeMetrics.advanceWidth("20:48")) : 0
@@ -545,7 +569,6 @@ Singleton {
         case "workspaces":
         case "tray":
         case "notifications":
-        case "tray":
             return true
         case "media":
             return MediaService.available
@@ -571,12 +594,19 @@ Singleton {
         case "weather":
             // Builds the service, which runs its first fetch.
             return WeatherService.available
+        case "markets":
+            // Builds the service, which runs its first fetch; false with an
+            // empty list.
+            return MarketsService.available
         case "github":
             // False until a name is set and a grid comes back, so nothing
             // shows on an unconfigured machine.
             return GithubService.available
         case "stats":
             // The sampler runs from boot (shell.qml touches it).
+            return true
+        case "screentime":
+            // Recording from boot; an empty day still reads 0:00.
             return true
         case "updates":
             // False on a machine with neither checkupdates nor pacman.

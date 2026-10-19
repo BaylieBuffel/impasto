@@ -239,7 +239,7 @@ Rectangle {
                 width: ListView.view.width
                 height: 28
                 radius: Theme.radiusSmall - 2
-                color: rowMouse.containsMouse ? Theme.islandSurfaceHover : "transparent"
+                color: rowMouse.containsMouse ? Theme.islandSurfaceHover : Qt.alpha(Theme.islandSurfaceHover, 0)
 
                 Behavior on color { ColorAnimation { duration: Theme.durationFast } }
 

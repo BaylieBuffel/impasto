@@ -17,6 +17,11 @@
 bibata-cursor-theme-bin      # the XCursor env.lua names, for clients with no hyprcursor
 
 
+# ── ICONS ───────────────────────────────────────────────────────────────────
+
+whitesur-icon-theme          # the shell's application icons
+
+
 # ── WALLPAPER ───────────────────────────────────────────────────────────────
 
 mpvpaper                     # plays an animated wallpaper
@@ -53,3 +58,9 @@ quickemu                     # the machines panel · brings quickget, spicy and 
 
 # · howdy-next is not listed: ./setup face installs it, and only where there
 # · is an infrared camera, since it brings opencv with it.
+
+
+# ── CAMERA EFFECTS ──────────────────────────────────────────────────────────
+
+# · python-mediapipe-bin is not listed: ./setup camera installs it with the
+# · virtual camera, and only where there is a webcam.

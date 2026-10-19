@@ -64,7 +64,13 @@ Singleton {
         { id: "keys",       icon: "󰌌", label: "Keys",
           detail: "Every shortcut, on one sheet",          panel: "keys" },
         { id: "packages",   icon: "󰏗", label: "Packages",
-          detail: "Updates, what is installed, the AUR",   panel: "packages" }
+          detail: "Updates, what is installed, the AUR",   panel: "packages" },
+        { id: "servers",    icon: "󰒋", label: "Servers",
+          detail: "The ports your projects listen on",     panel: "servers" },
+        { id: "screentime", icon: "󰔛", label: "Screen time",
+          detail: "Where the day went, app by app",        panel: "screentime" },
+        { id: "camera",     icon: "󰄀", label: "Camera",
+          detail: "Effects and reactions for your calls",  panel: "camera" }
     ]
 
     readonly property var defaultButtons: ["stats", "settings", "pet", "games", "notes", "board"]
@@ -308,16 +314,16 @@ Singleton {
             action: () => SettingsService.set("islandAttached", !SettingsService.islandAttached)
         },
         Toggle {
-            // All three at once; the settings set them one by one.
-            readonly property int count: [SettingsService.windowShadow,
-                SettingsService.barShadow, SettingsService.widgetShadow].filter(on => on).length
+            // All four at once; the settings set them one by one.
+            readonly property var shadows: ["windowShadow", "barShadow", "dockShadow", "widgetShadow"]
+            readonly property int count: shadows.filter(key => SettingsService[key]).length
 
             key: "shadow"; icon: "󰘷"; label: "Shadows"
-            detail: count === 3 ? "On" : count === 0 ? "Off" : `${count} of 3`
+            detail: count === shadows.length ? "On" : count === 0 ? "Off" : `${count} of ${shadows.length}`
             active: count > 0
             action: () => {
                 const on = count === 0
-                for (const key of ["windowShadow", "barShadow", "widgetShadow"])
+                for (const key of shadows)
                     SettingsService.set(key, on)
             }
         },
@@ -496,12 +502,10 @@ Singleton {
         { id: "toggles",       col: 0, row: 0, size: "2x3" },
         { id: "volume",        col: 0, row: 3, size: "2x1" },
         { id: "brightness",    col: 0, row: 4, size: "2x1" },
-        { id: "appearance",    col: 0, row: 5, size: "2x2" },
-        { id: "session",       col: 0, row: 7, size: "2x1" },
+        { id: "appearance",    col: 0, row: 5, size: "2x3" },
         { id: "media",         col: 2, row: 0, size: "2x2" },
         { id: "weather",       col: 2, row: 2, size: "2x2" },
-        { id: "calendar",      col: 2, row: 4, size: "2x3" },
-        { id: "shortcuts",     col: 2, row: 7, size: "2x1" },
+        { id: "calendar",      col: 2, row: 4, size: "2x4" },
         { id: "notifications", col: 4, row: 0, size: "2x8" }
     ]
 
@@ -559,6 +563,12 @@ Singleton {
     readonly property int panelWidth: root.boardWidth + 2 * Theme.panelPadding
     readonly property int panelHeight: root.boardHeight + 2 * Theme.panelPadding
         + (root.topShown ? root.rowHeight + root.rowGap : 0)
+
+    // The panel at its largest, rows and top row: the fixed height of the
+    // cards beside it while it is arranged.
+    readonly property int tallestPanel: Theme.centreRows * Theme.centreCellHeight
+        + (Theme.centreRows - 1) * Theme.centreGutter + 2 * Theme.panelPadding
+        + root.rowHeight + root.rowGap
 
     function offsetX(col: int): real {
         return col * Theme.centreStrideX
@@ -929,12 +939,6 @@ Singleton {
     // animating, so its position is mapped at query time.
     property Item tray: null
 
-    // Where the tray card was moved to, until arranging ends, and its size in
-    // columns and rows, for the rest of the session; null until it is moved
-    // or resized.
-    property var galleryAt: null
-    property var gallerySize: null
-
     // `x`, `y` are in the board's coordinates.
     function overTray(x: real, y: real): bool {
         if (!root.tray || !root.board)
@@ -950,7 +954,6 @@ Singleton {
         if (!on) {
             root.dragging = ""
             root.landing = null
-            root.galleryAt = null
         }
     }
 }

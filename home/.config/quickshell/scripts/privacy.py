@@ -49,6 +49,11 @@ def holders(devices):
             continue
         pid_dir = os.path.dirname(fd_dir)
         try:
+            # The camera effects relay the webcam to whoever reads the virtual
+            # camera; that reader is the one to name.
+            with open(os.path.join(pid_dir, "cmdline"), "rb") as source:
+                if b"camera.py" in source.read():
+                    continue
             with open(os.path.join(pid_dir, "comm"), encoding="utf-8") as source:
                 name = source.read().strip()
         except OSError:

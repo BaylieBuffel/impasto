@@ -11,6 +11,9 @@
 // transparent surface.
 //@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray
 
+// Application icons: one set, the same shape for every app.
+//@ pragma IconTheme WhiteSur-dark
+
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
@@ -48,6 +51,8 @@ ShellRoot {
         void ShortcutService.catalogue
         // Reads the user's name and face ahead of the first lock.
         void AccountService.user
+        // Counts the time in each application from the start of the session.
+        void ScreenTimeService.away
         // Registers the polkit agent, so a request is answered from the start.
         void PolkitService.asking
         // Probes for hyprpicker, so the first press is not the one that asks.
@@ -67,6 +72,8 @@ ShellRoot {
         void SessionService.sleepPending
         // Seeds the example profiles on a first install.
         void ProfileService.arrived
+        // Lists the virtual camera, so a call can pick it.
+        void CameraService.ready
     }
 
     // ── SCREENS ─────────────────────────────────────────────────────────────
@@ -194,6 +201,18 @@ ShellRoot {
 
             // The dock cannot see the island, so it asks.
             onLauncherRequested: root.island?.toggle("launcher")
+        }
+    }
+
+    // The screens' corners, rounded off only while the setting is on.
+    Variants {
+        model: SettingsService.screenCorners ? Quickshell.screens : []
+
+        ScreenCorners {
+            required property var modelData
+
+            screen: modelData
+            live: modelData.name === root.liveScreenName
         }
     }
 
@@ -457,6 +476,24 @@ ShellRoot {
         onPressed: root.island?.toggle("machines")
     }
 
+    GlobalShortcut {
+        name: "servers"
+        description: "Open the development servers"
+        onPressed: root.island?.toggle("servers")
+    }
+
+    GlobalShortcut {
+        name: "screentime"
+        description: "Open the screen time"
+        onPressed: root.island?.toggle("screentime")
+    }
+
+    GlobalShortcut {
+        name: "camera"
+        description: "Open the camera effects"
+        onPressed: root.island?.toggle("camera")
+    }
+
     // The clipboard and the emoji are launcher modes: pressed again on that
     // mode it closes, pressed on another mode it switches. The query is set
     // before opening because with `launcherFits` the panel's height depends on
@@ -578,7 +615,8 @@ ShellRoot {
     //
     // Everything the impasto command and `qs ipc call` can reach. Every
     // palette push hangs off WallpaperService.applied, which only fires
-    // inside this process, so Thunar's "Set as Wallpaper" comes in here too:
+    // inside this process, so the file manager's "Set as Wallpaper" comes in
+    // here too:
     //   qs ipc call wallpaper set <path>
     Commands {
         island: root.island

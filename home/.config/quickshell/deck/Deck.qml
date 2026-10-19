@@ -32,6 +32,7 @@ import "../components"
 // takes the keyboard.
 PanelWindow {
     id: root
+    CornerGuard {}
 
     readonly property bool editing: DesktopService.editing
 
@@ -770,12 +771,13 @@ PanelWindow {
         const point = board.mapFromItem(null, scene.x, scene.y)
         const edge = board.dropEdge
         const index = board.dropIndex
+        const removed = DesktopService.overTray(root.screenName, point.x, point.y)
         DeckService.dragging = ""
         DeckService.held = ""
         board.dropEdge = ""
         board.dropIndex = -1
         DesktopService.landing = null
-        if (DesktopService.overTray(root.screenName, point.x, point.y)) {
+        if (removed) {
             DesktopService.removeNote(key)
             return
         }

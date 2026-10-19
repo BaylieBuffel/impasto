@@ -43,6 +43,7 @@ import "../components"
 // torn down, and what is under the pointer is always the one that answers it.
 PanelWindow {
     id: root
+    CornerGuard {}
 
     // Named for the blur behind it (`windowrules.lua`), which shows only
     // through a ground that is not solid.
@@ -79,24 +80,30 @@ PanelWindow {
 
     readonly property string style: SettingsService.barStyle
     readonly property bool spread: root.style === "spread"
-    readonly property bool unified: root.style === "island"
+    // The bezel is one capsule too, spanning the top edge.
+    readonly property bool unified: root.style === "island" || root.style === "bezel"
     // The sides on the wallpaper, without capsules; not in one capsule, whose
     // band is the sides' ground.
     readonly property bool bare: !root.unified && SettingsService.barSides === "bare"
     readonly property bool grouped: !root.spread && !root.unified
 
-    // Stretch the band across the screen instead of fitting its contents.
-    // Only the one-capsule style has a band.
-    readonly property bool fullWidth: root.unified && SettingsService.barFullWidth
+    // The bezel: the band is the top of the screen's frame, out to both
+    // edges, with the screen's corners curving under its ends. It never
+    // moves: what the island shows drops out of its middle.
+    readonly property bool edgeToEdge: root.style === "bezel"
 
     readonly property bool holding: island.expanded
 
     // Maximum panel width. Spread, the sides stay put, so a panel gets the room
-    // between them; otherwise the sides move aside and it gets the whole bar.
-    readonly property int panelRoom: root.spread
-        ? root.width - 2 * (root.edgeMargin
-            + Math.max(leftZone.width, rightZone.width) + Theme.capsuleSpacing)
-        : root.width - 2 * root.edgeMargin
+    // between them, unless it is wider than that: then they hide as grouped
+    // sides do and it gets the whole bar, like everywhere else. A narrow
+    // screen with a full bar would otherwise cut a panel's columns off.
+    readonly property int roomBetween: root.width - 2 * (root.edgeMargin
+        + Math.max(leftZone.width, rightZone.width) + Theme.capsuleSpacing)
+    readonly property bool crowded: root.spread && island.expanded
+        && island.panelSize.width > root.roomBetween
+    readonly property int panelRoom: root.spread && !root.crowded
+        ? root.roomBetween : root.width - 2 * root.edgeMargin
 
     // Computed rather than read from `island.x`, which comes from an anchor
     // resolved during layout and would lag a frame behind the width.
@@ -132,7 +139,7 @@ PanelWindow {
     readonly property real bodyWidth: {
         if (!root.unified)
             return island.width
-        if (root.fullWidth)
+        if (root.edgeToEdge)
             return root.width - 2 * root.edgeMargin
         return root.restWidth + 2 * root.hostedSlot
     }
@@ -146,7 +153,7 @@ PanelWindow {
         || island.state.layer === island.state.layerSummary
         || island.state.layer === island.state.layerNotification
         || root.zen
-    readonly property real bodyX: root.fullWidth
+    readonly property real bodyX: root.edgeToEdge
         ? root.edgeMargin : (root.width - root.bodyWidth) / 2
 
     // 0 at rest, 1 once the island has taken over the band. Animated on the
@@ -162,14 +169,16 @@ PanelWindow {
     // `bandInto` goes from 0 to 1. Both run on the same curve, so this is one
     // morph with no clock of its own. The max() stops a spring curve's
     // overshoot from making the band narrower than the island.
-    readonly property real bandWidth: root.bandInto === 0 && !root.islandTaken
-        ? root.bodyWidth
-        : island.width + (root.bodyWidth - root.restWidth) * Math.max(0, 1 - root.bandInto)
+    readonly property real bandWidth: root.edgeToEdge
+        ? root.width
+        : root.bandInto === 0 && !root.islandTaken
+            ? root.bodyWidth
+            : island.width + (root.bodyWidth - root.restWidth) * Math.max(0, 1 - root.bandInto)
     readonly property real bandX: (root.width - root.bandWidth) / 2
 
     // Attached (notch mode), only the island reaches the screen edge; the
     // sides stay capsules, centred on `laneY`.
-    readonly property int islandTopMargin: SettingsService.islandAttached ? 0 : Theme.barTopMargin
+    readonly property int islandTopMargin: SettingsService.notched ? 0 : Theme.barTopMargin
 
     // How far the glass's light from the top reaches down the notch
     // (`GlassSheen`), for the fillets that carry it on.
@@ -178,16 +187,20 @@ PanelWindow {
     // The line everything on the bar is centred on. Attached, the island
     // reaches the screen edge, so its centre is half a margin higher and the
     // sides move up to match.
-    readonly property real laneY: SettingsService.islandAttached
+    readonly property real laneY: SettingsService.notched
         ? Theme.barTopMargin / 2 : Theme.barTopMargin
 
     readonly property int collapsedHeight: Theme.barBand
 
     // Grouped, the sides make room for a module detail but hide for a panel.
-    // In one capsule they hide whenever the island takes the band.
-    readonly property bool sidesAway: root.unified
+    // In one capsule they hide whenever the island takes the band, and spread
+    // only for a panel too wide to fit between them.
+    readonly property bool sidesAway: root.edgeToEdge
+        ? root.islandTaken && island.width / 2 > root.width / 2 - root.bodyX - root.hostedSlot
+        : root.unified
         ? root.islandTaken
-        : island.expanded && root.grouped && island.state.openPanel !== "module"
+        : root.crowded
+            || island.expanded && root.grouped && island.state.openPanel !== "module"
 
     anchors {
         top: true
@@ -208,9 +221,9 @@ PanelWindow {
     // whole screen only while the control centre is being arranged, since
     // blocks are dragged out of the tray card, which moves. Outside clicks are
     // left to the focus grab, so windows under an open panel stay usable.
-    readonly property real shapeLeft: root.unified
+    readonly property real shapeLeft: root.unified && !root.edgeToEdge
         ? Math.min(root.bandX, root.islandLeft) : root.islandLeft
-    readonly property real shapeRight: root.unified
+    readonly property real shapeRight: root.unified && !root.edgeToEdge
         ? Math.max(root.bandX + root.bandWidth, root.islandRight) : root.islandRight
     readonly property bool wholeScreen: root.holding && ControlsService.editing
 
@@ -386,7 +399,7 @@ PanelWindow {
         // does not work inside a Repeater.
         Loader {
             anchors.fill: parent
-            active: SettingsService.barShadow
+            active: Theme.barShadowShown
             sourceComponent: shadowBody
         }
 
@@ -415,7 +428,7 @@ PanelWindow {
 
                     Rectangle {
                         x: band.x
-                        y: SettingsService.islandAttached ? 0 : band.y
+                        y: SettingsService.notched ? 0 : band.y
                         width: band.width
                         height: band.y + band.height - y
                         radius: band.radius
@@ -423,19 +436,34 @@ PanelWindow {
                         topRightRadius: band.topRightRadius
                         // Not `visible`: inside the hidden source it reads false
                         // and the band is left out of the mask.
-                        opacity: root.unified ? 1 : 0
+                        opacity: root.unified && !root.edgeToEdge ? 1 : 0
                     }
 
                     // Attached, the shadow runs up to the screen's edge, so the
                     // cut does too while the island slides up into the notch.
                     Rectangle {
                         x: root.islandLeft
-                        y: SettingsService.islandAttached ? 0 : island.y
+                        y: SettingsService.notched ? 0 : island.y
                         width: island.width
                         height: island.y + island.height - y
                         radius: island.radius
-                        topLeftRadius: SettingsService.islandAttached ? 0 : island.topLeftRadius
-                        topRightRadius: SettingsService.islandAttached ? 0 : island.topRightRadius
+                        topLeftRadius: SettingsService.notched ? 0 : island.topLeftRadius
+                        topRightRadius: SettingsService.notched ? 0 : island.topRightRadius
+                        opacity: root.edgeToEdge ? 0 : 1
+                    }
+
+                    // The bezel cuts its whole silhouette out, corners and drop.
+                    BezelShape {
+                        width: root.width
+                        height: root.height
+                        opacity: root.edgeToEdge ? 1 : 0
+                        bandHeight: band.height
+                        corner: bezelEdge.corner
+                        dropLeft: drop.x
+                        dropRight: drop.x + drop.width
+                        dropDepth: drop.visible ? drop.depth : 0
+                        dropRadius: island.radius
+                        color: "black"
                     }
 
                     Repeater {
@@ -448,7 +476,7 @@ PanelWindow {
                             y: modelData.y
                             width: modelData.width
                             height: modelData.height
-                            opacity: modelData.visible ? 1 : 0
+                            opacity: modelData.visible && !root.edgeToEdge ? 1 : 0
                             mirrored: modelData.mirrored
                             color: "black"
                         }
@@ -473,7 +501,7 @@ PanelWindow {
                     }
 
                     readonly property int spread: Theme.shadowBarSpread
-                    readonly property int pad: SettingsService.islandAttached ? Theme.shadowBarRange : 0
+                    readonly property int pad: SettingsService.notched ? Theme.shadowBarRange : 0
 
                     Rectangle {
                         x: band.x - caster.spread
@@ -483,7 +511,7 @@ PanelWindow {
                         radius: band.radius + caster.spread
                         topLeftRadius: band.topLeftRadius > 0 ? band.topLeftRadius + caster.spread : 0
                         topRightRadius: band.topRightRadius > 0 ? band.topRightRadius + caster.spread : 0
-                        visible: body.visible
+                        visible: body.visible && !root.edgeToEdge
                         color: Theme.shadowColor
                     }
 
@@ -495,6 +523,23 @@ PanelWindow {
                         radius: island.radius + caster.spread
                         topLeftRadius: island.topLeftRadius > 0 ? island.topLeftRadius + caster.spread : 0
                         topRightRadius: island.topRightRadius > 0 ? island.topRightRadius + caster.spread : 0
+                        visible: !root.edgeToEdge
+                        color: Theme.shadowColor
+                    }
+
+                    // The bezel casts from its whole silhouette, moved down by
+                    // the spread: its top and sides are the screen's edges.
+                    BezelShape {
+                        y: caster.pad + caster.spread
+                        width: root.width
+                        height: root.height
+                        visible: root.edgeToEdge && body.visible
+                        bandHeight: band.height
+                        corner: bezelEdge.corner
+                        dropLeft: drop.x
+                        dropRight: drop.x + drop.width
+                        dropDepth: drop.visible ? drop.depth : 0
+                        dropRadius: island.radius
                         color: Theme.shadowColor
                     }
 
@@ -513,7 +558,7 @@ PanelWindow {
                             y: caster.pad + modelData.y
                             width: modelData.width
                             height: modelData.height
-                            visible: modelData.visible
+                            visible: modelData.visible && !root.edgeToEdge
                             opacity: modelData.opacity
 
                             // Solid only: along the edge of the screen a
@@ -575,10 +620,14 @@ PanelWindow {
                 x: root.bandX
                 y: root.islandTopMargin
                 width: root.bandWidth
-                height: Math.max(root.bandRow, island.height)
+                height: root.edgeToEdge ? root.bandRow : Math.max(root.bandRow, island.height)
                 radius: island.radius
-                topLeftRadius: SettingsService.islandAttached ? 0 : band.radius
-                topRightRadius: SettingsService.islandAttached ? 0 : band.radius
+                topLeftRadius: SettingsService.notched ? 0 : band.radius
+                topRightRadius: SettingsService.notched ? 0 : band.radius
+                // Edge to edge, the screen's corners round it off below, so
+                // its own ends come in square and round as it draws in.
+                bottomLeftRadius: root.edgeToEdge ? 0 : band.radius
+                bottomRightRadius: root.edgeToEdge ? 0 : band.radius
                 color: island.surfaceColor
 
                 Behavior on color { ColorAnimation { duration: Theme.durationFast } }
@@ -587,7 +636,7 @@ PanelWindow {
                 GlassSheen {
                     shape: band
                     visible: Theme.glass && !island.paper
-                    edges: !SettingsService.islandAttached
+                    edges: !SettingsService.notched
                 }
 
                 // Clicking the band opens the island. The sides sit above it and
@@ -596,6 +645,58 @@ PanelWindow {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: island.open("controls")
+                }
+            }
+
+            // The screen's top corners, under the band's ends, when the screen
+            // is rounded.
+            Repeater {
+                model: root.edgeToEdge && SettingsService.screenCorners ? [0, 90] : []
+
+                ScreenCorner {
+                    required property int modelData
+
+                    x: modelData === 0 ? band.x : band.x + band.width - width
+                    y: band.y + band.height
+                    turn: modelData
+                    color: island.surfaceColor
+                }
+            }
+
+            // Edge to edge, the part of the island below the band, in the
+            // band's ground, and the two fillets joining it to the band.
+            // Starts under the band, not behind it, so a see-through ground is
+            // not laid twice. Its curves, and the fillets', never run deeper
+            // than the drop itself: a few pixels out of the band is a few
+            // pixels of flat edge, not two bumps.
+            Rectangle {
+                id: drop
+
+                readonly property real depth: island.y + island.height - (band.y + band.height)
+
+                visible: root.edgeToEdge && drop.depth > 0
+                x: root.islandLeft
+                y: band.y + band.height
+                width: island.width
+                height: drop.depth
+                radius: Math.min(island.radius, drop.depth)
+                topLeftRadius: 0
+                topRightRadius: 0
+                color: band.color
+            }
+
+            Repeater {
+                model: drop.visible ? [true, false] : []
+
+                NotchFillet {
+                    required property bool modelData
+
+                    width: Math.min(Theme.radiusNotch * 2, drop.depth)
+                    height: width
+                    x: modelData ? drop.x - width : drop.x + drop.width
+                    y: drop.y
+                    mirrored: modelData
+                    color: band.color
                 }
             }
         }
@@ -609,6 +710,9 @@ PanelWindow {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
             anchors.topMargin: root.islandTopMargin
+            // Edge to edge, out of the band only as far as it drops.
+            bottomLeftRadius: root.edgeToEdge ? Math.max(0, Math.min(island.radius, drop.depth)) : island.radius
+            bottomRightRadius: root.edgeToEdge ? Math.max(0, Math.min(island.radius, drop.depth)) : island.radius
 
             Behavior on anchors.topMargin {
                 enabled: island.animated
@@ -629,7 +733,7 @@ PanelWindow {
             radius: band.radius
             topLeftRadius: band.topLeftRadius
             topRightRadius: band.topRightRadius
-            visible: root.unified && !island.paper && !SettingsService.islandAttached
+            visible: root.unified && !island.paper && !SettingsService.notched
             color: "transparent"
             border.width: 1
             border.color: root.islandTaken ? Theme.islandRim : "transparent"
@@ -646,24 +750,99 @@ PanelWindow {
             anchors.fill: parent
             z: 3
 
-            // Right under the island, the grid's size, then the card of
-            // blocks.
+            // Beside the island when the screen has room on both sides for
+            // the card's widest block: two cards of one size on the left, the
+            // grid's size over the top row, and the card of blocks on the
+            // right, each side as tall as the island at its largest, whatever
+            // size it is now. Measured
+            // against the panel's declared size, not the island's, which is
+            // still opening. Otherwise the size and the blocks stack under it.
+            readonly property real side: (overlay.width - ControlsService.panelWidth) / 2
+                - 2 * Theme.desktopGutter
+            readonly property bool aside: blocks.item !== null && overlay.side >= blocks.item.narrowest
+            readonly property real tall: ControlsService.tallestPanel
+            readonly property real cardWidth: blocks.item ? blocks.item.card.width : 0
+            // The cards' top: the island's, but never flush with the screen
+            // edge when the island is attached, which the card of blocks
+            // cannot be either.
+            readonly property real cardsTop: Math.max(root.islandTopMargin, Theme.desktopGutter)
+            // Half the island each, unless the top row's editor needs more.
+            readonly property real half: Math.max((overlay.tall - Theme.desktopGutter) / 2,
+                sideCards.item ? sideCards.item.need : 0)
+
+            // Under the island, when there is no room beside it.
             Loader {
                 id: arranging
 
                 x: (parent.width - width) / 2
                 y: root.islandTopMargin + island.height + Theme.desktopGutter
-                active: root.live && ControlsService.editing
+                active: root.live && ControlsService.editing && !overlay.aside
                 sourceComponent: GridSize {}
             }
 
             Loader {
+                id: sideCards
+
+                x: (overlay.width - ControlsService.panelWidth) / 2
+                    - Theme.desktopGutter - overlay.cardWidth
+                y: overlay.cardsTop
+                active: root.live && ControlsService.editing && overlay.aside
+                sourceComponent: Column {
+                    readonly property real need: topRow.implicitHeight + 2 * Theme.panelPadding
+
+                    spacing: Theme.desktopGutter
+
+                    // The figure over the miniature, filling the card.
+                    Rectangle {
+                        width: overlay.cardWidth
+                        height: overlay.half
+                        radius: Theme.radiusLarge
+                        color: Theme.island
+                        border.color: Theme.borderIn(QsWindow.window)
+                        border.width: 1
+
+                        GridSize {
+                            anchors.fill: parent
+                            anchors.margins: Theme.panelPadding
+                            bare: true
+                            filling: true
+                        }
+                    }
+
+                    // The top row's buttons, arranged as on the settings page.
+                    Rectangle {
+                        width: overlay.cardWidth
+                        height: overlay.half
+                        radius: Theme.radiusLarge
+                        color: Theme.island
+                        border.color: Theme.borderIn(QsWindow.window)
+                        border.width: 1
+
+                        TopRowEditor {
+                            id: topRow
+
+                            x: Theme.panelPadding
+                            y: Theme.panelPadding
+                            width: parent.width - 2 * Theme.panelPadding
+                            fillTo: parent.height - 2 * Theme.panelPadding
+                        }
+                    }
+                }
+            }
+
+            Loader {
+                id: blocks
+
                 anchors.fill: parent
                 active: root.live && ControlsService.editing
                 sourceComponent: ControlsTray {
                     host: overlay
-                    homeTop: arranging.y + (arranging.item ? arranging.item.height : 0)
-                        + Theme.desktopGutter
+                    homeLeft: overlay.aside
+                        ? (overlay.width + ControlsService.panelWidth) / 2 + Theme.desktopGutter : -1
+                    room: overlay.side
+                    tall: 2 * overlay.half + Theme.desktopGutter
+                    homeTop: overlay.aside ? overlay.cardsTop
+                        : arranging.y + arranging.height + Theme.desktopGutter
                 }
             }
         }
@@ -676,7 +855,7 @@ PanelWindow {
 
             x: (root.unified ? Math.min(root.bandX, root.islandLeft) : root.islandLeft) - width
             anchors.top: parent.top
-            visible: SettingsService.islandAttached
+            visible: SettingsService.notched
             mirrored: true
             color: island.surfaceColor
             sheenReach: root.notchSheen
@@ -687,7 +866,7 @@ PanelWindow {
 
             x: root.unified ? Math.max(root.bandX + root.bandWidth, root.islandRight) : root.islandRight
             anchors.top: parent.top
-            visible: SettingsService.islandAttached
+            visible: SettingsService.notched
             color: island.surfaceColor
             sheenReach: root.notchSheen
         }
@@ -695,34 +874,83 @@ PanelWindow {
         // On glass, attached, the island and its fillets are one pane: the
         // light from the top runs on into the fillets, and the thick edge
         // follows the outline below rather than the island's own rectangle.
-        Repeater {
-            model: SettingsService.islandAttached && Theme.glass && !island.paper
-                ? [[1, 1], [2, 0.6], [3, 0.35], [4, 0.15]] : []
+        // Its light falls as the sheen's does, from one side on liquid, over
+        // the whole pane fillets and all.
+        LitEdge {
+            id: notchEdge
 
+            readonly property real fillet: Theme.radiusNotch * 2
+            readonly property real shapeHeight: root.unified ? band.height : island.height
+
+            x: root.shapeLeft - notchEdge.fillet
+            width: root.shapeRight - root.shapeLeft + 2 * notchEdge.fillet
+            height: notchEdge.shapeHeight
+            // Edge to edge, the band is the bezel's own edge and the island
+            // drops out of it with no outline to trace.
+            visible: SettingsService.notched && !island.paper && !root.edgeToEdge
+
+            Repeater {
+                model: Theme.glass ? [[1, 1], [2, 0.6], [3, 0.35], [4, 0.15]] : []
+
+                NotchOutline {
+                    required property var modelData
+
+                    inset: modelData[0]
+                    shapeLeft: notchEdge.fillet
+                    shapeRight: notchEdge.width - notchEdge.fillet
+                    shapeHeight: notchEdge.shapeHeight
+                    radius: island.radius
+                    color: Qt.rgba(1, 1, 1, Theme.edgeOf(Theme.surfaceStyle) * modelData[1])
+                }
+            }
+
+            // Attached, the hairline runs down the fillets and round the shape,
+            // and not along the screen edge. In one capsule only while the
+            // island has the band, as `outline` above. Lit from one side, the
+            // rim's light is drawn here so it fades with the edge.
             NotchOutline {
-                required property var modelData
-
-                inset: modelData[0]
-                shapeLeft: root.shapeLeft
-                shapeRight: root.shapeRight
-                shapeHeight: root.unified ? band.height : island.height
+                shapeLeft: notchEdge.fillet
+                shapeRight: notchEdge.width - notchEdge.fillet
+                shapeHeight: notchEdge.shapeHeight
                 radius: island.radius
-                color: Qt.rgba(1, 1, 1, Theme.glassEdge * modelData[1])
+                color: !root.unified || root.islandTaken
+                    ? (notchEdge.lit ? Qt.rgba(1, 1, 1, Theme.litRim) : Theme.islandRim)
+                    : "transparent"
+
+                Behavior on color { ColorAnimation { duration: Theme.durationMedium } }
             }
         }
 
-        // Attached, the hairline runs down the fillets and round the shape, and
-        // not along the screen edge. In one capsule only while the island has
-        // the band, as `outline` above.
-        NotchOutline {
-            visible: SettingsService.islandAttached && !island.paper
-            shapeLeft: root.shapeLeft
-            shapeRight: root.shapeRight
-            shapeHeight: root.unified ? band.height : island.height
-            radius: island.radius
-            color: !root.unified || root.islandTaken ? Theme.islandRim : "transparent"
+        // The bezel's edge, on glass: one rim and thick edge round the band's
+        // underside, the screen's corners and whatever drops out of it, lit
+        // as one pane — from one side on liquid, which falls on its two ends.
+        LitEdge {
+            id: bezelEdge
 
-            Behavior on color { ColorAnimation { duration: Theme.durationMedium } }
+            readonly property real corner: SettingsService.screenCorners ? Theme.screenRadius : 0
+
+            width: root.width
+            height: band.height + Math.max(bezelEdge.corner, drop.visible ? drop.depth : 0)
+            visible: root.edgeToEdge && Theme.glass && !island.paper
+
+            Repeater {
+                model: [[0, 1], [1, 1], [2, 0.6], [3, 0.35], [4, 0.15]]
+
+                BezelOutline {
+                    required property var modelData
+
+                    inset: modelData[0]
+                    bandHeight: band.height
+                    corner: bezelEdge.corner
+                    dropLeft: drop.x
+                    dropRight: drop.x + drop.width
+                    dropDepth: drop.visible ? drop.depth : 0
+                    dropRadius: island.radius
+                    color: modelData[0] === 0
+                        ? (bezelEdge.lit ? Qt.rgba(1, 1, 1, Theme.litRim) : Theme.islandRim)
+                        : Qt.rgba(1, 1, 1, Theme.edgeOf(Theme.surfaceStyle) * modelData[1])
+                }
+            }
         }
 
         component BareShadow: MultiEffect {

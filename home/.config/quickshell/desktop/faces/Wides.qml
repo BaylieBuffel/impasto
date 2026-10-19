@@ -41,6 +41,8 @@ Item {
         updates: updatesWide,
         weather: weatherWide,
         github: githubWide,
+        screentime: screenTimeWide,
+        markets: marketsWide,
         stats: statsWide,
         claude: claudeWide,
         codex: codexWide,
@@ -1026,5 +1028,108 @@ Item {
         id: trayWide
 
         TrayFace { ink: root.ink; row: root.row; family: "4x2" }
+    }
+
+    // The first pair in full, and its line.
+    Component {
+        id: marketsWide
+
+        WidgetFace {
+
+            ink: root.ink
+            label: MarketsService.lead ? `${MarketsService.lead.base}/${MarketsService.lead.quote}` : "Markets"
+            note: !MarketsService.lead
+                ? (MarketsService.pairs.length === 0 ? "nothing on the list" : "no prices")
+                : `${MarketsService.change(MarketsService.lead)} · ${MarketsService.lead.period}`
+            noteTint: MarketsService.lead ? MarketsService.tint(MarketsService.lead) : root.ink.muted
+
+            Text {
+                anchors.centerIn: parent
+                text: MarketsService.glyph(MarketsService.lead)
+                font.family: Theme.fontMono
+                font.pixelSize: 34
+                color: root.ink.text
+            }
+            reading: MarketsService.price(MarketsService.lead)
+            extraShare: 0.48
+
+            extra: [
+                Sparkline {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width
+                    height: 64
+                    values: MarketsService.shape(MarketsService.lead)
+                    stroke: MarketsService.tint(MarketsService.lead)
+                    thickness: 2
+                }
+            ]
+        }
+    }
+
+    // Today, and the week up to it with the average day dashed across.
+    Component {
+        id: screenTimeWide
+
+        WidgetFace {
+            ink: root.ink
+            label: Tr.t("Screen time")
+            reading: ScreenTimeService.duration(ScreenTimeService.todayTotal)
+            note: ScreenTimeService.todayNote
+
+            UsageRing {
+                anchors.fill: parent
+                anchors.margins: 4
+                parts: ScreenTimeService.todayParts
+                thickness: 5
+                accent: root.ink.accent
+                ink: root.ink.text
+            }
+            extraShare: 0.5
+
+            extra: [
+                Item {
+                    anchors.fill: parent
+
+                    UsageBars {
+                        id: weekBars
+
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.bottom: weekDays.top
+                        anchors.bottomMargin: 4
+                        stacks: ScreenTimeService.todayDigest.recent
+                        average: ScreenTimeService.todayBaseline
+                        gap: 6
+                        accent: root.ink.accent
+                        ink: root.ink.text
+                    }
+
+                    Row {
+                        id: weekDays
+
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+
+                        Repeater {
+                            model: ScreenTimeService.summary ? ScreenTimeService.summary.recent : []
+
+                            Text {
+                                required property var modelData
+
+                                width: weekBars.slot
+                                rightPadding: weekBars.gap
+                                horizontalAlignment: Text.AlignHCenter
+                                text: Qt.formatDate(ScreenTimeService.dateOf(modelData.date), "ddd").charAt(0)
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeLabel - 1
+                                color: root.ink.muted
+                            }
+                        }
+                    }
+                }
+            ]
+        }
     }
 }

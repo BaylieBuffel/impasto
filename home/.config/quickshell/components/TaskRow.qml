@@ -39,7 +39,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: Theme.radiusSmall
-        color: rowHover.hovered ? root.ink.raised : "transparent"
+        color: rowHover.hovered ? root.ink.raised : Qt.alpha(root.ink.raised, 0)
 
         Behavior on color { ColorAnimation { duration: Theme.durationFast } }
     }

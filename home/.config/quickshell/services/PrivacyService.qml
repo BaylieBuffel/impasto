@@ -92,7 +92,7 @@ Singleton {
     readonly property string who: {
         const names = []
         for (const holder of root.cameraHolders) {
-            if (holder !== "pipewire")
+            if (holder !== "pipewire" && holder !== "qs")
                 names.push(holder.charAt(0).toUpperCase() + holder.slice(1))
         }
         for (const node of root.listeners.concat(root.viewers))

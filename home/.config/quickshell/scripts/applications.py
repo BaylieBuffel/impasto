@@ -64,6 +64,8 @@ def read_entry(path):
         # uses to match running apps. Most entries omit it, so it is just
         # the first guess.
         "wmclass": section.get("StartupWMClass", "").strip(),
+        # Freedesktop categories, which screen time groups by.
+        "categories": [part for part in section.get("Categories", "").split(";") if part],
     }
 
 

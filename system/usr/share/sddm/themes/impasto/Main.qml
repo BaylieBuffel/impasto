@@ -59,7 +59,6 @@ Rectangle {
     property bool authenticating: false
     property bool failed: false
     property string message: ""
-    property bool opened: false
 
     function attempt(password: string): void {
         if (root.authenticating)
@@ -76,7 +75,6 @@ Rectangle {
         function onLoginSucceeded(): void {
             root.authenticating = false
             root.message = ""
-            root.opened = true
         }
 
         // The field clears itself; clearing it here would fight its shake.
@@ -132,16 +130,10 @@ Rectangle {
         }
     }
 
-    // ── ISLAND ──────────────────────────────────────────────────────────────
-
-    Island {
-        opened: root.opened
-    }
-
     // ── CLOCK ───────────────────────────────────────────────────────────────
     //
     // The lock screen's numbers: just above the middle at rest; awake, it
-    // rises under the island and steps back a little for the account.
+    // rises toward the top and steps back a little for the account.
 
     property date now: new Date()
 

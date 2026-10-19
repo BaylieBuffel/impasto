@@ -44,7 +44,7 @@ RowLayout {
             radius: width / 2
             color: slot.out
                 ? Theme.surfaceIn(QsWindow.window)
-                : (slotMouse.containsMouse ? Theme.surfaceHoverIn(QsWindow.window) : "transparent")
+                : (slotMouse.containsMouse ? Theme.surfaceHoverIn(QsWindow.window) : Qt.alpha(Theme.surfaceHoverIn(QsWindow.window), 0))
             border.width: 1
             // The active pet in white; sleepers outlined, empty slots faint.
             border.color: slot.out

@@ -14,11 +14,8 @@ import "../theme"
 import "../services"
 import "../components"
 
-// Theme, windows, type and motion.
-//
-// The compositor values here are stored in the shell's settings and pushed to
-// Hyprland at login and after every reload. `hypr/modules/look.lua` holds the
-// defaults and is never written.
+// The wallpaper and its palette, the terminal, type and the shell's motion.
+// What Hyprland does to windows is `WindowsSection`.
 SettingsSection {
     id: root
 
@@ -27,38 +24,14 @@ SettingsSection {
 
     signal panelRequested(string panel)
 
-    Component.onCompleted: {
-        CompositorService.load()
-        // Loaded up front so the rules have rows as soon as they are shown.
-        CompositorService.loadWindowRules()
-        CompositorService.loadGlass()
-        FontService.load()
-    }
+    Component.onCompleted: FontService.load()
 
-    // The stored value first, the compositor's second: `remember` stores on
-    // every drag step while the push to Hyprland is coalesced, so reading the
-    // compositor back would lag the slider.
-    function live(option: string, fallback: real): real {
-        const kept = SettingsService.compositor
-        if (kept && kept[option] !== undefined)
-            return Number(kept[option])
-        return Number(CompositorService.value(option, fallback))
-    }
-
-    readonly property bool blurOn: {
-        const kept = SettingsService.compositor
-        const raw = kept && kept["decoration:blur:enabled"] !== undefined
-            ? kept["decoration:blur:enabled"]
-            : CompositorService.value("decoration:blur:enabled", true)
-        return String(raw) === "true" || raw === true || raw === 1
-    }
-
-    // ── THEME ───────────────────────────────────────────────────────────────
+    // ── WALLPAPER ───────────────────────────────────────────────────────────
 
     ColumnLayout {
         Layout.fillWidth: true
         spacing: root.spacing
-        visible: root.tab === "theme"
+        visible: root.tab === "wallpaper"
 
         // Theme and wallpaper are chosen in the island's appearance panel;
         // this row only opens it.
@@ -112,6 +85,24 @@ SettingsSection {
                 }
             }
         }
+    }
+
+    // ── TERMINAL ────────────────────────────────────────────────────────────
+
+    ColumnLayout {
+        Layout.fillWidth: true
+        spacing: root.spacing
+        visible: root.tab === "terminal"
+
+        SettingGroup {
+            title: Tr.t("Look")
+            note: Tr.t("What kitty's window is made of.")
+            hint: Tr.t("Classic is solid black, Glass the accent-tinted ground over a blur of the wallpaper, and Liquid a clear frosted pane. Its typeface is the monospace one, under Type.")
+
+            GroundRow {
+                key: "terminalGround"
+            }
+        }
 
         // The tiles play the generated greeting scenes in the current palette.
         SettingGroup {
@@ -140,287 +131,6 @@ SettingsSection {
                             scene: greetingTile.modelData.id
                             version: ThemeService.greetingStamp
                         }
-                    }
-                }
-            }
-        }
-    }
-
-    // ── WINDOWS ─────────────────────────────────────────────────────────────
-
-    ColumnLayout {
-        Layout.fillWidth: true
-        spacing: root.spacing
-        visible: root.tab === "windows"
-
-        SettingGroup {
-            title: Tr.t("Windows")
-            note: Tr.t("How Hyprland draws every window, this one included.")
-            hint: Tr.t("Dwindle splits the space each new window lands in, Master keeps one large window beside a stack, and Scrolling lays windows in a row wider than the screen. The preview below is live and at full size. The border stays at zero because gaps and rounding already separate windows; the inner gap applies to each side of a window, so two windows sit twice that apart.")
-
-            SettingBlock {
-                WindowsPreview {
-                    Layout.fillWidth: true
-                    rounding: root.live("decoration:rounding", 22)
-                    borderWidth: root.live("general:border_size", 0)
-                    gapsIn: root.live("general:gaps_in", 7)
-                    gapsOut: root.live("general:gaps_out", 18)
-                    inactiveOpacity: root.live("decoration:inactive_opacity", 1)
-                    blur: root.blurOn ? root.live("decoration:blur:size", 6) : 0
-                    glassed: SettingsService.windowGlass && CompositorService.glassAvailable
-                    lifted: SettingsService.windowShadow
-                    wallpaper: WallpaperService.currentWallpaper
-                }
-            }
-
-            SettingRow {
-                label: Tr.t("Layout")
-
-                SegmentedControl {
-                    options: CompositorService.windowLayouts.map(
-                        entry => ({ id: entry.id, label: Tr.t(entry.label) }))
-                    current: CompositorService.windowLayout
-                    onSelected: id => CompositorService.remember("general:layout", id)
-                }
-            }
-
-            SettingSlider {
-                label: Tr.t("Window rounding")
-                value: CompositorService.value("decoration:rounding", 22)
-                from: 0
-                to: 30
-                unit: " px"
-                onMoved: value => CompositorService.remember("decoration:rounding", Math.round(value))
-            }
-
-            SettingSlider {
-                label: Tr.t("Border width")
-                value: CompositorService.value("general:border_size", 0)
-                from: 0
-                to: 6
-                reading: CompositorService.value("general:border_size", 0) === 0
-                    ? Tr.t("None") : `${CompositorService.value("general:border_size", 0)} px`
-                onMoved: value => CompositorService.remember("general:border_size", Math.round(value))
-            }
-
-            SettingSlider {
-                label: Tr.t("Inner gap")
-                value: CompositorService.value("general:gaps_in", 7)
-                from: 0
-                to: 20
-                unit: " px"
-                onMoved: value => CompositorService.remember("general:gaps_in", Math.round(value))
-            }
-
-            SettingSlider {
-                label: Tr.t("Outer gap")
-                value: CompositorService.value("general:gaps_out", 18)
-                from: 0
-                to: 40
-                unit: " px"
-                onMoved: value => CompositorService.remember("general:gaps_out", Math.round(value))
-            }
-
-            SettingSlider {
-                label: Tr.t("Inactive opacity")
-                value: Math.round(CompositorService.value("decoration:inactive_opacity", 1) * 100)
-                from: 60
-                to: 100
-                unit: "%"
-                onMoved: value => CompositorService.remember(
-                    "decoration:inactive_opacity", (Math.round(value) / 100).toFixed(2))
-            }
-        }
-
-        SettingGroup {
-            title: Tr.t("Blur and glass")
-            note: Tr.t("What shows through a window.")
-            hint: Tr.t("Blur shows behind anything translucent, such as the terminal. Glass (a Hyprland plugin, tuned in look.lua) frosts and refracts what is behind a window.")
-
-            SettingSlider {
-                label: Tr.t("Blur")
-                value: CompositorService.value("decoration:blur:enabled", 0)
-                    ? CompositorService.value("decoration:blur:size", 4) : 0
-                from: 0
-                to: 12
-                reading: {
-                    const on = CompositorService.value("decoration:blur:enabled", 0)
-                    const size = CompositorService.value("decoration:blur:size", 4)
-                    return on ? `${Tr.t("size")} ${size}` : Tr.t("Off")
-                }
-                onMoved: value => {
-                    const size = Math.round(value)
-                    CompositorService.remember("decoration:blur:enabled", size === 0 ? "false" : "true")
-                    if (size > 0)
-                        CompositorService.remember("decoration:blur:size", size)
-                }
-            }
-
-            // Locked, with the reason, when the hyprglass plugin is not loaded.
-            SettingRow {
-                label: Tr.t("Glass")
-                locked: !CompositorService.glassAvailable
-                reason: Tr.t("Needs the glass plugin — run ./setup plugins")
-
-                ToggleSwitch {
-                    checked: SettingsService.windowGlass
-                    onToggled: checked => SettingsService.set("windowGlass", checked)
-                }
-            }
-
-        }
-
-        // ── WINDOW RULES ────────────────────────────────────────────────────
-        //
-        // Read-only and folded by default; the rules live in
-        // `windowrules.lua`. `compositor.py rules` parses each into its match
-        // and its effects.
-        SettingGroup {
-            id: rules
-
-            property bool expanded: false
-
-            title: Tr.t("Window rules")
-            hint: Tr.t("Read from hypr/modules/windowrules.lua — changing them means editing that file.")
-
-            SettingRow {
-                label: Tr.t("Every rule")
-                reading: `${CompositorService.windowRules.length} ${Tr.t("in windowrules.lua")}`
-
-                PillButton {
-                    text: rules.expanded ? Tr.t("Hide") : Tr.t("View")
-                    icon: rules.expanded ? "󰅃" : "󰅀"
-                    implicitWidth: 76
-                    implicitHeight: 26
-                    active: rules.expanded
-                    onClicked: rules.expanded = !rules.expanded
-                }
-            }
-
-            SettingBlock {
-                visible: rules.expanded && CompositorService.windowRules.length === 0
-
-                Text {
-                    Layout.fillWidth: true
-                    text: Tr.t("Nothing to show — the file is missing or empty.")
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeLabel
-                    color: Theme.textMuted
-                }
-            }
-
-            Repeater {
-                model: rules.expanded ? CompositorService.windowRules : []
-
-                Item {
-                    id: ruleRow
-
-                    required property var modelData
-
-                    Layout.fillWidth: true
-                    implicitHeight: ruleBody.implicitHeight + 20
-
-                    SettingDivider {}
-
-                    ColumnLayout {
-                        id: ruleBody
-
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.leftMargin: 14
-                        anchors.rightMargin: 14
-                        spacing: 5
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 8
-
-                            Text {
-                                text: ruleRow.modelData.name
-                                elide: Text.ElideRight
-                                font.family: Theme.fontFamily
-                                font.pixelSize: Theme.fontSizeSmall
-                                font.weight: Font.Medium
-                                color: Theme.text
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            // One chip per effect, in Hyprland's terms.
-                            Repeater {
-                                model: ruleRow.modelData.effects
-
-                                Rectangle {
-                                    required property string modelData
-
-                                    implicitWidth: effectLabel.implicitWidth + 16
-                                    implicitHeight: 20
-                                    radius: height / 2
-                                    color: Theme.islandSurfaceHover
-                                    border.color: Theme.islandBorder
-                                    border.width: 1
-
-                                    Text {
-                                        id: effectLabel
-                                        anchors.centerIn: parent
-                                        text: parent.modelData
-                                        font.family: Theme.fontFamily
-                                        font.pixelSize: Theme.fontSizeLabel
-                                        color: Theme.accent
-                                    }
-                                }
-                            }
-                        }
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: ruleRow.modelData.match
-                            elide: Text.ElideRight
-                            font.family: Theme.fontMono
-                            font.pixelSize: Theme.fontSizeLabel
-                            color: Theme.textMuted
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // ── DEPTH ───────────────────────────────────────────────────────────────
-    //
-    // How the shell sits on the wallpaper: a shadow under each layer.
-
-    ColumnLayout {
-        Layout.fillWidth: true
-        spacing: root.spacing
-        visible: root.tab === "depth"
-
-        // One shadow per layer, side by side: the windows are Hyprland's, the
-        // bar, the dock and the widgets the shell's own.
-        SettingGroup {
-            title: Tr.t("Shadows")
-            note: Tr.t("What is lifted off the wallpaper.")
-
-            Repeater {
-                model: [
-                    { key: "windowShadow", label: "Windows" },
-                    { key: "barShadow", label: "Bar and dock" },
-                    { key: "widgetShadow", label: "Desktop widgets" }
-                ]
-
-                SettingRow {
-                    id: shadowRow
-
-                    required property var modelData
-
-                    label: Tr.t(shadowRow.modelData.label)
-                    reading: SettingsService[shadowRow.modelData.key]
-                        ? Tr.t("Lifted off the wallpaper") : Tr.t("Flat")
-
-                    ToggleSwitch {
-                        checked: SettingsService[shadowRow.modelData.key]
-                        onToggled: checked => SettingsService.set(shadowRow.modelData.key, checked)
                     }
                 }
             }
@@ -478,8 +188,8 @@ SettingsSection {
 
     // ── MOTION ──────────────────────────────────────────────────────────────
     //
-    // One row of presets per renderer: the island is animated by Qt and the
-    // windows by Hyprland, and neither can use the other's curves.
+    // The shell's own pace; the windows' animation is Hyprland's, on the
+    // Windows page, and neither can use the other's curves.
 
     ColumnLayout {
         Layout.fillWidth: true
@@ -489,7 +199,7 @@ SettingsSection {
         SettingGroup {
             title: Tr.t("Game mode")
             note: Tr.t("Everything still, for a game or a slow machine.")
-            hint: Tr.t("Stops the shell's animations, the spectrum and the pet, and turns off Hyprland's animations, blur, shadow and glass. The settings below are kept and come back when it is turned off.")
+            hint: Tr.t("Stops the shell's animations, the spectrum and the pet, makes the island, the dock and the widgets solid without shadows, and turns off Hyprland's animations, blur, shadow and glass. The settings below are kept and come back when it is turned off.")
 
             SettingRow {
                 label: Tr.t("Game mode")
@@ -534,39 +244,6 @@ SettingsSection {
                         IslandMotionPreview {
                             anchors.centerIn: parent
                             preset: shellTile.modelData
-                        }
-                    }
-                }
-            }
-        }
-
-        // The hint describes every preset, built from `Motion.presets`.
-        SettingGroup {
-            title: Tr.t("Windows")
-            note: Tr.t("How Hyprland animates windows. Reapplied after every reload.")
-            hint: Motion.presets.map(
-                entry => `${Tr.t(entry.label)} — ${Tr.t(entry.note)}`).join(" ")
-
-            SettingTiles {
-                label: Tr.t("Preset")
-
-                Repeater {
-                    model: Motion.presets
-
-                    PreviewTile {
-                        id: tile
-
-                        required property var modelData
-
-                        stageHeight: 52
-                        caption: Tr.t(tile.modelData.label)
-                        selected: SettingsService.animationPreset === tile.modelData.id
-                        onPicked: SettingsService.set("animationPreset", tile.modelData.id)
-
-                        MotionPreview {
-                            anchors.centerIn: parent
-                            width: parent.width - 22
-                            preset: tile.modelData
                         }
                     }
                 }

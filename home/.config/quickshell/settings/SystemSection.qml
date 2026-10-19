@@ -15,8 +15,9 @@ import "../theme"
 import "../services"
 import "../components"
 
-// Two parts: the profiles, with Reset under them (it resets only the active
-// profile), and this machine: language, hardware and the colophon.
+// Three parts: the profiles, with Reset under them (it resets only the active
+// profile); updates and the files changed since the install; and this
+// machine: language, hardware and the colophon.
 SettingsSection {
     id: root
 
@@ -174,15 +175,6 @@ SettingsSection {
         visible: root.tab === "machine"
         spacing: root.spacing
 
-        // The remote is asked when the page opens, and only when the last
-        // answer is old enough to be worth another.
-        onVisibleChanged: {
-            if (!visible)
-                return
-            VersionService.checkStale()
-            VersionService.listFiles()
-        }
-
         // Strings missing from `Tr.qml` fall back to English.
         SettingGroup {
             title: Tr.t("This window")
@@ -244,6 +236,81 @@ SettingsSection {
                     }
                 }
             }
+        }
+
+        // Colophon: the palette board over the name in the signature face.
+        Item {
+            Layout.fillWidth: true
+            Layout.topMargin: 12
+            Layout.bottomMargin: 8
+            implicitHeight: colophon.implicitHeight
+
+            Column {
+                id: colophon
+
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 2
+
+                PaletteBoard {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    size: 76
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    topPadding: 6
+                    text: "impasto"
+                    font.family: Theme.fontSignature
+                    font.pixelSize: 30
+                    color: Theme.text
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: Tr.t("A Hyprland shell, and the desk around it")
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeLabel
+                    color: Theme.textMuted
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    topPadding: 4
+                    text: "github.com/andreumassanet/impasto"
+                    font.family: Theme.fontMono
+                    font.pixelSize: Theme.fontSizeLabel
+                    color: repoMouse.containsMouse ? Theme.accent : Theme.textMuted
+                    opacity: repoMouse.containsMouse ? 1 : 0.6
+
+                    Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+
+                    MouseArea {
+                        id: repoMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Qt.openUrlExternally(
+                            "https://github.com/andreumassanet/impasto")
+                    }
+                }
+            }
+        }
+    }
+
+    // ── UPDATES ─────────────────────────────────────────────────────────────
+
+    ColumnLayout {
+        Layout.fillWidth: true
+        visible: root.tab === "updates"
+        spacing: root.spacing
+
+        // The remote is asked when the page opens, and only when the last
+        // answer is old enough to be worth another.
+        onVisibleChanged: {
+            if (!visible)
+                return
+            VersionService.checkStale()
+            VersionService.listFiles()
         }
 
         SettingGroup {
@@ -496,64 +563,6 @@ SettingsSection {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.everyEdit = !root.everyEdit
-                    }
-                }
-            }
-        }
-
-        // Colophon: the palette board over the name in the signature face.
-        Item {
-            Layout.fillWidth: true
-            Layout.topMargin: 12
-            Layout.bottomMargin: 8
-            implicitHeight: colophon.implicitHeight
-
-            Column {
-                id: colophon
-
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 2
-
-                PaletteBoard {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    size: 76
-                }
-
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    topPadding: 6
-                    text: "impasto"
-                    font.family: Theme.fontSignature
-                    font.pixelSize: 30
-                    color: Theme.text
-                }
-
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: Tr.t("A Hyprland shell, and the desk around it")
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeLabel
-                    color: Theme.textMuted
-                }
-
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    topPadding: 4
-                    text: "github.com/andreumassanet/impasto"
-                    font.family: Theme.fontMono
-                    font.pixelSize: Theme.fontSizeLabel
-                    color: repoMouse.containsMouse ? Theme.accent : Theme.textMuted
-                    opacity: repoMouse.containsMouse ? 1 : 0.6
-
-                    Behavior on color { ColorAnimation { duration: Theme.durationFast } }
-
-                    MouseArea {
-                        id: repoMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: Qt.openUrlExternally(
-                            "https://github.com/andreumassanet/impasto")
                     }
                 }
             }

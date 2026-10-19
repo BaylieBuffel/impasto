@@ -25,7 +25,7 @@ Rectangle {
     width: parent ? parent.width : 0
     height: Theme.detailRow
     radius: Theme.radiusSmall
-    color: root.chosen || pick.containsMouse ? Theme.surfaceHoverIn(QsWindow.window) : "transparent"
+    color: root.chosen || pick.containsMouse ? Theme.surfaceHoverIn(QsWindow.window) : Qt.alpha(Theme.surfaceHoverIn(QsWindow.window), 0)
 
     Behavior on color { ColorAnimation { duration: Theme.durationFast } }
 

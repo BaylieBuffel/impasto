@@ -383,7 +383,8 @@ Item {
                 readonly property string label: {
                     const found = HyprlandService.named.find(workspace => workspace.id === shown.number)
                     const name = found && typeof found.name === "string" ? found.name : ""
-                    return name !== "" && name !== `${shown.number}` ? name : `${shown.number}`
+                    return name !== "" && name !== `${shown.number}` ? name
+                        : `${HyprlandService.numberOn(shown.number, shown.screenName)}`
                 }
 
                 property int was: 0

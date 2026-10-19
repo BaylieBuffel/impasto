@@ -299,30 +299,6 @@ Singleton {
         { id: "grp:caps_toggle", label: "Caps Lock" }
     ]
 
-    // ── WINDOW RULES ────────────────────────────────────────────────────────
-    //
-    // Parsed from windowrules.lua for display only; never edited.
-    property var windowRules: []
-
-    function loadWindowRules(): void {
-        root.rulesReader.running = true
-    }
-
-    readonly property Process rulesReader: Process {
-        command: [root.script, "rules"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                if (!text || text.trim() === "")
-                    return
-                try {
-                    root.windowRules = JSON.parse(text)
-                } catch (error) {
-                    console.warn("Cannot parse the window rules:", error)
-                }
-            }
-        }
-    }
-
     // ── CURSOR ──────────────────────────────────────────────────────────────
     //
     // One vector cursor, recoloured and compiled by compositor.py and set with
