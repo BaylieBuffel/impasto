@@ -37,3 +37,67 @@ A Hyprland desktop shell (Quickshell/QML) that doubles as a dotfiles installer. 
 
 - `main` moves only on release; work in progress lives on `dev` (`./setup update` follows whichever branch is checked out). CI's `check.yml` runs on both.
 - Releases are tags `v*`; `release.yml` verifies the tag's commit is an ancestor of `origin/main` and publishes with `gh release create`.
+
+## File structure highlights
+
+```
+home/.config/quickshell/
+├── shell.qml              # Entry point
+├── qmldir                 # Module/singleton registration (must edit when adding services/components)
+├── Commands.qml           # Shell commands exposed to CLI
+├── services/              # 50+ singleton services (Theme, Wallpaper, Hyprland, etc.)
+├── components/            # Reusable QML types (Card, ModuleCard, RingIndicator, etc.)
+├── scripts/               # Python workers (theme_manager.py, compositor.py, greeting.py, etc.)
+├── bar/                   # Bar + island widgets, modules, panels
+├── lock/                  # Lock screen
+├── deck/                  # Notes deck
+├── dock/                  # Dock
+├── desktop/               # Desktop widgets
+├── settings/              # Settings window
+├── capture/               # Screen capture
+└── theme/                 # Theme, Palettes, Motion, Board, Tr
+
+home/.config/hypr/
+├── hyprland.lua           # Main config (requires modules/*)
+├── modules/
+│   ├── keybinds.lua       # Reads ~/.local/state/quickshell/keys.tsv
+│   └── ...                # animations, autostart, env, input, look, monitors, programs, windowrules
+└── xdph.conf              # XDG portal config
+```
+
+## Key Python scripts (in `scripts/`)
+
+| Script | Purpose |
+|--------|---------|
+| `theme_manager.py` | Palette extraction, wallpaper handling, color generation |
+| `compositor.py` | Hyprland integration, window/workspace monitoring |
+| `greeting.py` | Fastfetch greeting with pixel-art animation |
+| `stats.py` | System stats (CPU, RAM, GPU, disk, network) |
+| `clipboard.py` | Clipboard history |
+| `weather.py` | Weather data |
+| `applications.py` | App launcher data |
+| `monitors.py` | Monitor configuration |
+| `packages.py` | Package update checking |
+| `updates.py` | Version/update checking |
+| `capture.py` | Screen capture/selection |
+| `record.py` | Screen recording |
+| `account.py` | User account/face management |
+
+## Common tasks
+
+| Task | Command |
+|------|---------|
+| Install | `./setup install` |
+| Update | `./setup update` |
+| Sync dev changes | `./setup sync` or `./setup sync --watch` |
+| Verify syntax | `./setup check` |
+| Uninstall | `./setup uninstall` |
+| Test system tree | `IMPASTO_ROOT=/tmp/test ./setup system` |
+
+## Environment notes
+
+- Requires Arch Linux, Hyprland 0.56+, Quickshell 0.3
+- Python scripts need `psutil`, `requests`, `pillow`, `pywal` (installed via packages)
+- `inotify-tools` needed for `--watch` mode
+- SDDM theme in `system/usr/share/sddm/themes/impasto/`
+- Face unlock via howdy-next (infrared camera required)
