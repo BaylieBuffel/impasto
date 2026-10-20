@@ -268,10 +268,21 @@ Singleton {
         onTriggered: root.configure()
     }
 
-    readonly property Process configurer: Process {}
+    // A write asked for while one runs goes when it exits, with the
+    // configuration as it is then; stopping it could lose both.
+    property bool reconfigure: false
+    readonly property Process configurer: Process {
+        onExited: if (root.reconfigure) {
+            root.reconfigure = false
+            root.configure()
+        }
+    }
 
     function configure(): void {
-        root.configurer.running = false
+        if (root.configurer.running) {
+            root.reconfigure = true
+            return
+        }
         root.configurer.command = [root.script, "configure", root.configuration]
         root.configurer.running = true
     }

@@ -193,15 +193,18 @@ Item {
     // ── INPUT ───────────────────────────────────────────────────────────────
 
     // The grown icon and half the gap either side answer the pointer, so
-    // swollen icons leave no dead space between them.
+    // swollen icons leave no dead space between them; across the dock it
+    // reaches out by the growth, away from the screen edge.
     containmentMask: Item {
         readonly property real span: Theme.dockIcon * slot.scale + Theme.dockGap
+        readonly property real grown: Theme.dockIcon * Math.max(0, slot.scale - 1)
+        readonly property real before: root.edge === "left" ? 0 : grown
 
         parent: root
-        x: root.vertical ? -Theme.dockPadding : (root.width - span) / 2
-        y: root.vertical ? (root.height - span) / 2 : -Theme.dockPadding
-        width: root.vertical ? Theme.dockThickness : span
-        height: root.vertical ? span : Theme.dockThickness
+        x: root.vertical ? -Theme.dockPadding - before : (root.width - span) / 2
+        y: root.vertical ? (root.height - span) / 2 : -Theme.dockPadding - before
+        width: root.vertical ? Theme.dockThickness + grown : span
+        height: root.vertical ? span : Theme.dockThickness + grown
     }
 
     HoverHandler {

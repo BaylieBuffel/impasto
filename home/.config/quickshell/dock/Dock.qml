@@ -243,13 +243,20 @@ PanelWindow {
     //
     // Empty while the desktop is being arranged, so a widget dragged across the
     // dock does not hand it the pointer.
+    //
+    // Magnifying, it reaches out by the growth, so a swollen icon takes the
+    // pointer all the way to its far edge.
+    readonly property real reach: root.magnifying
+        ? Math.ceil(Theme.dockIcon * (Theme.dockMagnify - 1)) : 0
+
     mask: Region {
         x: root.menuItem ? 0 : shelf.x - (root.edge === "left" ? root.bridge : 0)
-        y: root.menuItem ? 0 : shelf.y
+            - (root.edge === "right" ? root.reach : 0)
+        y: root.menuItem ? 0 : shelf.y - (root.edge === "bottom" ? root.reach : 0)
         width: DesktopService.editing ? 0 : (root.menuItem ? root.width
-            : shelf.width + (root.vertical ? root.bridge : 0))
+            : shelf.width + (root.vertical ? root.bridge + root.reach : 0))
         height: DesktopService.editing ? 0 : (root.menuItem ? root.height
-            : shelf.height + (root.vertical ? 0 : root.bridge))
+            : shelf.height + (root.vertical ? 0 : root.bridge + root.reach))
         regions: DockService.autohide && !root.menuItem && !DesktopService.editing ? [sliver] : []
     }
 

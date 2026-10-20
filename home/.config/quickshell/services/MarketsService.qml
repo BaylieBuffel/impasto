@@ -49,9 +49,6 @@ Singleton {
         ? Theme.cardHeight(root.others.length, Theme.cardRowGap + root.chartHeight)
         : Theme.cardHeight(0, root.chartHeight)
 
-    // First read happens when anything touches the singleton.
-    Component.onCompleted: root.refresh()
-
     // The pairs as the backend takes them: commas or spaces between.
     readonly property var pairs: SettingsService.markets.split(/[\s,]+/).filter(text => text !== "")
 
@@ -175,7 +172,18 @@ Singleton {
         root.watchers = Math.max(0, root.watchers - 1)
     }
 
+    // A refresh asked for while one runs goes again when it exits, with the
+    // list as it is then; a running Process ignores being started.
+    property bool again: false
+    property var asked: []
+
     function refresh(): void {
+        if (root.query.running) {
+            root.again = true
+            return
+        }
+        root.asked = root.pairs
+        root.query.command = [Quickshell.shellPath("scripts/markets.py")].concat(root.asked)
         root.query.running = true
     }
 
@@ -201,9 +209,15 @@ Singleton {
     }
 
     readonly property Process query: Process {
-        command: [Quickshell.shellPath("scripts/markets.py")].concat(root.pairs)
+        onExited: if (root.again) {
+            root.again = false
+            root.refresh()
+        }
         stdout: StdioCollector {
             onStreamFinished: {
+                // An answer for a list since changed is not this list's.
+                if (root.asked.join(" ") !== root.pairs.join(" "))
+                    return
                 let report = null
                 try {
                     report = JSON.parse(text)

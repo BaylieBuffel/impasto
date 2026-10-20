@@ -1408,21 +1408,32 @@ verb_splash() {
         act sudo plymouth-set-default-theme impasto || refuse 'the theme could not be chosen' || return
     fi
     say 'theme    impasto'
-    local loader= esp entry
+    local loader= esp entry root config
     if [[ -f /etc/default/grub ]] && command -v grub-mkconfig >/dev/null; then
         loader=grub
     fi
-    if esp=$(sudo bootctl --print-esp-path 2>/dev/null) && sudo test -d "$esp/loader/entries"; then
-        for entry in $(sudo find "$esp/loader/entries" -maxdepth 1 -name '*.conf'); do
+    esp=$(sudo bootctl --print-esp-path 2>/dev/null) || esp=
+    # The entries are on the ESP, or on an XBOOTLDR partition beside it.
+    for root in "$esp" "$(sudo bootctl --print-boot-path 2>/dev/null)"; do
+        [[ -n $root ]] && sudo test -d "$root/loader/entries" || continue
+        for entry in $(sudo find "$root/loader/entries" -maxdepth 1 -name '*.conf'); do
             splash_argument "$entry" '^options' && loader=${loader:-systemd-boot}
         done
-    fi
+    done
     splash_argument /etc/kernel/cmdline '.' && loader=${loader:-uki}
     for entry in /boot/limine.conf /boot/limine/limine.conf ${esp:+"$esp/limine.conf"} \
             ${esp:+"$esp/EFI/limine/limine.conf"}; do
         splash_argument "$entry" '^[[:space:]]*(kernel_)?cmdline:' && loader=${loader:-limine}
     done
     [[ -n $loader ]] || refuse 'no boot loader found to give the splash argument to' || return
+    # A preset that names its own config makes mkinitcpio skip conf.d, and
+    # with it the drop-in that adds the hook.
+    for config in $(sed -nE "s/^[[:space:]]*[A-Za-z_]*config=[\"']?([^\"' ]+).*/\1/p" \
+            /etc/mkinitcpio.d/*.preset 2>/dev/null | sort -u); do
+        grep -qE '^[[:space:]]*HOOKS=.*[( ]plymouth[ )]' "$config" 2>/dev/null \
+            || refuse "$config is named by a preset, so mkinitcpio skips its drop-ins: add plymouth to its HOOKS after systemd or udev" \
+            || return
+    done
     act sudo mkinitcpio -P >/dev/null || refuse 'the initramfs did not rebuild' || return
     say 'rebuilt  the initramfs, with plymouth'
     if [[ $loader == grub ]]; then

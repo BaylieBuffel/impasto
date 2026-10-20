@@ -21,8 +21,11 @@ SettingRow {
     // terminalGround.
     required property string key
 
-    readonly property string value: Theme.seeThrough(SettingsService[root.key])
-        ? SettingsService[root.key] : "classic"
+    // Empty, from a profile saved when the layer could follow the bar, is
+    // drawn as the bar's, so it reads as the bar's.
+    readonly property string stored: SettingsService[root.key] === ""
+        ? SettingsService.surfaceStyle : SettingsService[root.key]
+    readonly property string value: Theme.seeThrough(root.stored) ? root.stored : "classic"
 
     label: Tr.t("Ground")
     reading: root.value === "liquid" ? Tr.t("Clear frosted glass, lit at the edge")

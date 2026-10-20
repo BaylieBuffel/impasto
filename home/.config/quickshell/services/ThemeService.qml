@@ -86,12 +86,25 @@ QtObject {
     onTerminalFontChanged: root.pushTerminalFont()
 
     function pushTerminalFont(): void {
+        if (!SettingsService.arrived)
+            return
         root.fontProcess.command = [root.script, "push-terminal-font",
                                     SettingsService.fontMono]
-        root.fontProcess.running = true
+        if (root.fontProcess.running)
+            root.fontAgain = true
+        else
+            root.fontProcess.running = true
     }
 
-    readonly property Process fontProcess: Process {}
+    // A push asked for while one runs goes again when it exits; a running
+    // Process ignores being started.
+    property bool fontAgain: false
+    readonly property Process fontProcess: Process {
+        onExited: if (root.fontAgain) {
+            root.fontAgain = false
+            root.pushTerminalFont()
+        }
+    }
 
     // ── GROUND ──────────────────────────────────────────────────────────────
     //
@@ -101,19 +114,40 @@ QtObject {
     onTerminalGroundChanged: root.pushTerminalGround()
 
     function pushTerminalGround(): void {
+        if (!SettingsService.arrived)
+            return
         root.groundProcess.command = [root.script, "push-terminal-ground",
                                       SettingsService.terminalGround]
-        root.groundProcess.running = true
+        if (root.groundProcess.running)
+            root.groundAgain = true
+        else
+            root.groundProcess.running = true
     }
 
-    readonly property Process groundProcess: Process {}
+    property bool groundAgain: false
+    readonly property Process groundProcess: Process {
+        onExited: if (root.groundAgain) {
+            root.groundAgain = false
+            root.pushTerminalGround()
+        }
+    }
 
-    // Also pushed at startup: if the setting never changes, the fragment
-    // kitty.conf includes would never be written.
-    Component.onCompleted: {
+    // Also pushed at startup, once the settings are read: before that they
+    // hold the defaults, and a setting that never changes would leave the
+    // fragment kitty.conf includes unwritten.
+    function pushTerminalSettings(): void {
         root.pushTerminalFont()
         root.pushTerminalGround()
         root.pushGreeting()
+    }
+
+    Component.onCompleted: root.pushTerminalSettings()
+
+    readonly property Connections settingsArrival: Connections {
+        target: SettingsService
+        function onArrivedChanged(): void {
+            root.pushTerminalSettings()
+        }
     }
 
     // ── GREETING ────────────────────────────────────────────────────────────
