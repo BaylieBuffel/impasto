@@ -55,6 +55,25 @@ SettingsSection {
             }
         }
 
+        // The desk's own lights follow the palette; the fans' level is a
+        // control centre slider, since it is not a matter of colour.
+        SettingGroup {
+            title: Tr.t("Devices")
+            note: Tr.t("The keyboard, the mouse and the case fans.")
+            hint: Tr.t("The palette's accent recolours the keyboard over sk80ctl and the mouse and the fans on the motherboard's RGB headers over OpenRGB. A device that is not plugged in is left alone. The fans' brightness is a slider in the control centre.")
+
+            SettingRow {
+                label: Tr.t("Follow the palette")
+                reading: SettingsService.rgbLighting
+                    ? Tr.t("The palette's accent") : Tr.t("Left as they are")
+
+                ToggleSwitch {
+                    checked: SettingsService.rgbLighting
+                    onToggled: checked => SettingsService.set("rgbLighting", checked)
+                }
+            }
+        }
+
         // Each tile loops its awww transition in miniature.
         SettingGroup {
             title: Tr.t("Transition")

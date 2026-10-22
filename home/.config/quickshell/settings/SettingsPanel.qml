@@ -62,7 +62,7 @@ Item {
         { id: "controls", category: "shell", icon: "󰕰", label: Tr.t("Control Centre"),
           blurb: Tr.t("What the island opens onto when you click it."),
           tabs: [],
-          keywords: "controls control centre center panel doors buttons row pet games notes board tasks kanban stats blocks grid toggles tiles arrange edit tray wifi bluetooth airplane microphone focus",
+          keywords: "controls control centre center panel doors buttons row pet games notes board tasks kanban stats blocks grid toggles tiles arrange edit tray wifi bluetooth airplane microphone focus fans fan lights rgb lighting brightness",
           page: controlsPage },
 
         { id: "launcher", category: "shell", icon: "󰍉", label: Tr.t("Launcher"),
@@ -97,7 +97,7 @@ Item {
                  { id: "terminal", label: Tr.t("Terminal") },
                  { id: "type", label: Tr.t("Type") },
                  { id: "motion", label: Tr.t("Motion") }],
-          keywords: "appearance theme colour color palette wallpaper transition fade wipe wave circle random terminal kitty ground glass greeting fastfetch fa scene lava lamp critters koi invaders font family sans mono nerd icons typeface animation speed pace curve easing motion game mode performance",
+          keywords: "appearance theme colour color palette wallpaper transition fade wipe wave circle random terminal kitty ground glass greeting fastfetch fa scene lava lamp critters koi invaders font family sans mono nerd icons typeface animation speed pace curve easing motion game mode performance devices rgb lighting keyboard mouse fans openrgb sk80ctl",
           page: appearancePage },
 
         { id: "windows", category: "desk", icon: "󰖯", label: Tr.t("Windows"),

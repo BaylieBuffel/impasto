@@ -139,6 +139,9 @@ QtObject {
         root.pushTerminalFont()
         root.pushTerminalGround()
         root.pushGreeting()
+        // A palette pushed before the settings arrived waited for the answer
+        // (`RgbService` holds it).
+        RgbService.apply(RgbService.lastColors)
     }
 
     Component.onCompleted: root.pushTerminalSettings()
@@ -210,6 +213,7 @@ QtObject {
         root.terminalProcess.command = [root.script, "push-terminal-palette",
                                         JSON.stringify(colors)]
         root.terminalProcess.running = true
+        RgbService.apply(colors)
     }
 
     function parseJson(text: string, what: string): var {

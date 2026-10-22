@@ -687,6 +687,15 @@ QtObject {
                 "Esto abre el panel de apariencia de la isla, donde se eligen juntos fondos y paletas.",
             "Theme and wallpaper": "Tema y fondo",
 
+            "Devices": "Dispositivos",
+            "The keyboard, the mouse and the case fans.":
+                "El teclado, el ratón y los ventiladores de la caja.",
+            "The palette's accent recolours the keyboard over sk80ctl and the mouse and the fans on the motherboard's RGB headers over OpenRGB. A device that is not plugged in is left alone. The fans' brightness is a slider in the control centre.":
+                "El acento de la paleta recolorea el teclado con sk80ctl y el ratón y los ventiladores de los conectores RGB de la placa base con OpenRGB. Un dispositivo que no está conectado se deja como está. El brillo de los ventiladores es un deslizador del centro de control.",
+            "Follow the palette": "Seguir la paleta",
+            "The palette's accent": "El acento de la paleta",
+            "Left as they are": "Se dejan como están",
+
             "Transition": "Transición",
             "How the next wallpaper arrives over the last one.":
                 "Cómo llega el siguiente fondo sobre el anterior.",

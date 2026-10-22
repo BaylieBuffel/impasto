@@ -38,6 +38,7 @@ Item {
         toggles: togglesBlock,
         volume: volumeBlock,
         brightness: brightnessBlock,
+        fans: fansBlock,
         appearance: appearanceBlock,
         media: mediaBlock,
         weather: weatherBlock,
@@ -107,6 +108,22 @@ Item {
                 expandable: BrightnessService.several
                 onMoved: value => BrightnessService.setPercent(value)
                 onExpandClicked: root.panelRequested("brightness")
+            }
+        }
+    }
+
+    // The case fans' light, not their speed: the motherboard's RGB headers,
+    // dimmed through OpenRGB by scaling the colour.
+    Component {
+        id: fansBlock
+        Item {
+            SliderRow {
+                anchors.centerIn: parent
+                width: parent.width
+                height: Math.min(parent.height, 48)
+                icon: "󰈐"
+                value: SettingsService.rgbFanBrightness
+                onMoved: value => RgbService.setFanBrightness(value)
             }
         }
     }

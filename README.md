@@ -93,7 +93,8 @@ monitor over DDC/CI.
 **The palette comes out of the painting.** Pick a wallpaper and its colours
 reach everything at once: the island and the widgets, the terminal, neovim,
 VSCodium, the GTK and Qt windows, Nautilus down to its folders, Vesktop, Zen
-and Spotify. Thirty-three paintings come with it, and a video can be the wallpaper
+and Spotify — and, over sk80ctl and OpenRGB, the keyboard, the mouse and the
+case fans. Thirty-three paintings come with it, and a video can be the wallpaper
 too.
 
 **Any module can live on the wallpaper**, on a grid, in four shapes, drawn in

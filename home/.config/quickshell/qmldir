@@ -16,6 +16,7 @@ singleton MonitorService     1.0 services/MonitorService.qml
 singleton AudioService       1.0 services/AudioService.qml
 singleton BatteryService     1.0 services/BatteryService.qml
 singleton BrightnessService  1.0 services/BrightnessService.qml
+singleton RgbService         1.0 services/RgbService.qml
 singleton OsdService         1.0 services/OsdService.qml
 singleton MediaService       1.0 services/MediaService.qml
 singleton LyricsService      1.0 services/LyricsService.qml

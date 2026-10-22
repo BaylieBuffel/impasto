@@ -480,6 +480,7 @@ Singleton {
         { id: "toggles",       name: "Toggles",       icon: "󰨚", sizes: ["2x2", "2x3", "2x4", "3x2", "3x3", "4x2", "4x3"] },
         { id: "volume",        name: "Volume",        icon: "󰕾", sizes: ["2x1", "3x1", "4x1"] },
         { id: "brightness",    name: "Brightness",    icon: "󰃠", sizes: ["2x1", "3x1", "4x1"] },
+        { id: "fans",          name: "Fan lights",    icon: "󰈐", sizes: ["2x1", "3x1", "4x1"] },
         { id: "appearance",    name: "Appearance",    icon: "󰏘", sizes: ["2x2", "2x3", "2x4", "3x3", "4x2"] },
         { id: "media",         name: "Media",         icon: "󰝚", sizes: ["2x2", "2x3", "3x2", "4x2"] },
         { id: "weather",       name: "Weather",       icon: "󰖐", sizes: ["2x1", "2x2", "2x3", "4x2"] },

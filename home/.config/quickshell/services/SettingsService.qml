@@ -111,6 +111,8 @@ Singleton {
     readonly property alias barSides: config.barSides
     readonly property alias wallpaperTransition: config.wallpaperTransition
     readonly property alias greeting: config.greeting
+    readonly property alias rgbLighting: config.rgbLighting
+    readonly property alias rgbFanBrightness: config.rgbFanBrightness
     readonly property alias fontFamily: config.fontFamily
     readonly property alias fontMono: config.fontMono
     readonly property alias notificationTimeout: config.notificationTimeout
@@ -567,6 +569,11 @@ Singleton {
         // Row id from `ThemeService.greetings`; `random` is picked by `fa` on
         // each run.
         property string greeting: "random"
+
+        // The keyboard, the mouse and the case fans take the palette's
+        // accent (`RgbService`). The fans' own level is independent.
+        property bool rgbLighting: true
+        property int rgbFanBrightness: 100
 
         // One of `barStyles`.
         property string barStyle: "grouped"

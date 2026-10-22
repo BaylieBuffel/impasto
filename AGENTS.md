@@ -81,6 +81,7 @@ home/.config/hypr/
 | `updates.py` | Version/update checking |
 | `capture.py` | Screen capture/selection |
 | `record.py` | Screen recording |
+| `rgb.py` | Keyboard, mouse and case-fan lighting from the palette |
 | `account.py` | User account/face management |
 
 ## Common tasks
