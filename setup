@@ -178,6 +178,9 @@ Usage: ./setup <command> [options]
               infrared camera: installs howdy-next and enrols you
   camera      effects and gesture reactions on the webcam, for any call:
               installs the virtual camera and the face and hand models
+  rgb         the desk's lighting: OpenRGB for the mouse and the case fans,
+              the Womier SK80's driver where that keyboard is plugged in,
+              both udev rules reloaded and the palette painted on them
   splash      the boot splash: chooses the theme, adds splash to the kernel
               command line and rebuilds the initramfs (asks for a password)
 
@@ -1030,8 +1033,8 @@ verb_uninstall() {
 # ── EXTRAS ──────────────────────────────────────────────────────────────────
 #
 # What a copied file cannot hold: what opens which file, dark GTK, the cursor,
-# Nautilus, VSCodium, Vesktop, Spotify, face unlock, the camera effects and the
-# boot splash.
+# Nautilus, VSCodium, Vesktop, Spotify, face unlock, the camera effects, the
+# lighting and the boot splash.
 # `install` sets each up once per machine, and one that cannot run yet is
 # skipped with the reason and tried again by the next install or update.
 # After that only its own verb runs it, so a setting changed in one of those
@@ -1065,6 +1068,7 @@ extras() {
     applied vesktop || soft vesktop verb_vesktop
     applied face || soft face verb_face
     applied camera || soft camera verb_camera
+    applied rgb || soft rgb verb_rgb
     applied splash || soft splash verb_splash
     if ! applied spotify || [[ -f /opt/spotify/Apps/xpui.spa ]]; then soft spotify verb_spotify; fi
 }
@@ -1375,6 +1379,89 @@ verb_camera() {
     say 'ok · SUPER + SHIFT + W, and pick "impasto camera" in any call'
 }
 
+
+# ── LIGHTING ────────────────────────────────────────────────────────────────
+
+# Whether a device with this vendor:product pair is on the USB bus, read from
+# sysfs so that nothing else has to be installed for it.
+usb_present() {
+    local want=${1,,} dir id
+    for dir in /sys/bus/usb/devices/*; do
+        [[ -r $dir/idVendor && -r $dir/idProduct ]] || continue
+        id=$(cat "$dir/idVendor" 2>/dev/null):$(cat "$dir/idProduct" 2>/dev/null)
+        [[ ${id,,} == "$want" ]] && return 0
+    done
+    return 1
+}
+
+# Re-creating the nodes is what applies a rule to a device already plugged in,
+# so a fresh package needs no replug to take effect.
+udev_reload() {
+    command -v udevadm >/dev/null || return 1
+    act sudo udevadm control --reload-rules || return 1
+    act sudo udevadm trigger --subsystem-match=usb --subsystem-match=hidraw || return 1
+    say 'reloaded the udev rules'
+}
+
+SK80_USB=05ac:024f
+SK80_DRIVER=https://github.com/BaylieBuffel/womier-sk80
+
+# The desk's lighting: OpenRGB for the mouse and the case fans on the board's
+# RGB headers, sk80ctl for the Womier SK80. Both packages carry their own udev
+# rule, so what is left here is installing them where they are missing,
+# reloading the rules, and painting the palette that is already chosen.
+verb_rgb() {
+    section lighting
+    local colors tmp
+    local -a yes=()
+    if (( NOCONFIRM )); then yes=(--noconfirm); fi
+
+    if command -v openrgb >/dev/null; then
+        say 'ok       openrgb'
+    else
+        act sudo pacman -S --needed "${yes[@]}" openrgb \
+            || refuse 'openrgb was not installed' || return
+        say 'installed openrgb — the mouse and the case fans'
+    fi
+
+    if ! usb_present "$SK80_USB"; then
+        say 'skipped  the keyboard — no Womier SK80 on the bus'
+    elif command -v sk80ctl >/dev/null; then
+        say 'ok       sk80ctl'
+    elif (( NOCONFIRM )) || [[ ! -t 0 ]]; then
+        say 'skipped  the keyboard — sk80ctl is not installed, and cannot be built unattended'
+    elif ask 'build the Womier SK80 driver from its repository?'; then
+        if (( DRY )); then
+            say "would build womier-sk80 from $SK80_DRIVER"
+        else
+            tmp=$(mktemp -d)
+            if git clone -q --depth=1 "$SK80_DRIVER" "$tmp/womier-sk80" \
+                && (cd "$tmp/womier-sk80" && makepkg -si "${yes[@]}"); then
+                say 'installed womier-sk80 — the keyboard'
+            else
+                rm -rf "$tmp"
+                refuse 'the keyboard driver was not built' || return
+            fi
+            rm -rf "$tmp"
+        fi
+    else
+        say 'skipped  the keyboard'
+    fi
+
+    udev_reload || say 'note     the rules were not reloaded; replug the devices once'
+
+    # The palette the shell pushed last, so the repaint needs nothing new.
+    colors=${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/dynamic-colors.json
+    if [[ ! -f $colors ]]; then
+        say 'left     the colours alone — no palette has been pushed yet'
+    elif act python3 "$REPO/home/.config/quickshell/scripts/rgb.py" apply >/dev/null; then
+        say 'painted  the keyboard, the mouse and the fans in the palette'
+    else
+        say 'note     the palette did not reach every device'
+    fi
+    stamp rgb
+}
+
 # Adds `splash` to a file of kernel command lines, on the lines that $2
 # matches, where it is not there yet. Says whether anything changed.
 splash_argument() {
@@ -1634,7 +1721,7 @@ parts() {
                 packages) note="$pacman from the repositories, $aur from the AUR" ;;
                 system)   note='sddm, unless this machine already has one' ;;
                 plugins)  note='shake to find · glass on the windows' ;;
-                extras)   note='Nautilus, VSCodium, Vesktop, Spotify, GTK, your face, the camera, the boot splash' ;;
+                extras)   note='Nautilus, VSCodium, Vesktop, Spotify, GTK, your face, the camera, the lighting, the boot splash' ;;
             esac
             if (( on[i] )); then box="$ACCENT◉$OFF"; else box="$FAINT○$OFF"; fi
             if (( i == at )); then
@@ -1764,6 +1851,7 @@ main() {
         vesktop)   verb_vesktop ;;
         face)      verb_face ;;
         camera)    verb_camera ;;
+        rgb)       verb_rgb ;;
         splash)    verb_splash ;;
         files)     verb_files ;;
         check)     verb_check ;;

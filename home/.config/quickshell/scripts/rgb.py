@@ -24,8 +24,9 @@ RGB headers the fans sit on. The fans are switched to the board's Static
 effect first, since its own rainbow otherwise wins over the colour;
 IMPASTO_RGB_FANS_MODE names another mode. Set IMPASTO_RGB_MOUSE or
 IMPASTO_RGB_FANS to a name fragment to pick a device by name instead. A device
-that is not plugged in, or a tool that is not installed, is skipped; nothing
-here is fatal.
+that is not plugged in, or a tool that is not installed, is skipped; a mode the
+controller does not offer is reported on stderr rather than counted as painted.
+Nothing here is fatal.
 """
 
 import json
@@ -158,13 +159,25 @@ def apply_keyboard(accent):
 
 
 def paint(device, colour, mode):
-    """Set one device's colour, and its mode first when one is named."""
+    """Set one device's colour, and its mode first when one is named.
+
+    OpenRGB exits 0 even when it refuses a mode or a colour — the only sign is
+    the ``Error:`` line it prints — so its output is what says whether this
+    worked. The message is passed on: a board whose modes are named differently
+    is a reason to set IMPASTO_RGB_FANS_MODE, not a silent nothing.
+    """
     command = ["openrgb", "--device", device["name"]]
     if mode:
         command += ["--mode", mode]
     command += ["--color", colour]
     result = run(command)
-    return result is not None and result.returncode == 0
+    if result is None:
+        return False
+    for line in (result.stdout + result.stderr).splitlines():
+        if line.startswith("Error:"):
+            sys.stderr.write(f"{device['name']}: {line.removeprefix('Error:').strip()}\n")
+            return False
+    return result.returncode == 0
 
 
 def apply_openrgb(devices, accent, fan_colour):

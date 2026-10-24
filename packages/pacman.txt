@@ -72,6 +72,13 @@ pacman-contrib               # checkupdates, which counts the updates
 hyprshutdown                 # SUPER + SHIFT + E exits through it, if installed
 
 
+# ── LIGHTING ────────────────────────────────────────────────────────────────
+
+openrgb                      # the mouse and the case fans, painted from the palette
+# · sk80ctl is not here: ./setup rgb builds the Womier SK80's driver from its
+# · repository, since it is the one piece only some desks need.
+
+
 # ── CAPTURE ─────────────────────────────────────────────────────────────────
 
 satty                        # annotating

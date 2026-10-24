@@ -155,7 +155,7 @@ up the login screen, the plugins and the programs around the shell. Run
 | `--skip-packages` | install nothing; copy and build only |
 | `--skip-system` | leave `/` alone — no login screen, and no password for it |
 | `--skip-plugins` | no shake to find, no glass |
-| `--skip-extras` | leave Nautilus, VSCodium, Vesktop, Spotify, GTK, face unlock, the camera and the boot splash alone |
+| `--skip-extras` | leave Nautilus, VSCodium, Vesktop, Spotify, GTK, face unlock, the camera, the lighting and the boot splash alone |
 | `--aur-helper yay\|paru` | which helper builds the AUR half — built from the AUR if you have neither |
 | `--noconfirm` | take the default at every question |
 | `-n`, `--dry-run` | say what would happen, and do none of it |
@@ -198,6 +198,7 @@ never overwrites a file you edited.
 | 🎧 | Player | [Spotify](https://www.spotify.com) · [spicetify](https://spicetify.app) |
 | 🌐 | Browser | [Zen](https://zen-browser.app) |
 | 🔆 | Monitor brightness | [ddcutil](https://www.ddcutil.com) |
+| ⌨️ | Lighting | [OpenRGB](https://openrgb.org) · [womier-sk80](https://github.com/BaylieBuffel/womier-sk80) |
 | 🔑 | Login screen | [SDDM](https://github.com/sddm/sddm) |
 | 🎨 | Boot splash | [Plymouth](https://gitlab.freedesktop.org/plymouth/plymouth) |
 | 👤 | Face unlock | [howdy-next](https://codeberg.org/nathawat/howdy-next) |
