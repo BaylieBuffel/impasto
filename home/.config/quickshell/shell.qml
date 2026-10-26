@@ -26,6 +26,7 @@ import "./dock"
 import "./lock"
 import "./services"
 import "./settings"
+import "./steamdeck"
 import "./theme"
 
 // Entry point: the windows, the services that must start at boot, and the
@@ -237,6 +238,12 @@ ShellRoot {
         onPanelRequested: panel => root.island?.open(panel)
     }
 
+    // The Deck's own window, for the machine on the network rather than this
+    // one. Kept beside Settings: both are toplevels the compositor floats.
+    SteamDeckWindow {
+        id: deckWindow
+    }
+
     // The control centre's gear. The island has already closed itself.
     Connections {
         target: root.island
@@ -384,6 +391,20 @@ ShellRoot {
         if (!settingsWindow.shown)
             root.island?.close()
         settingsWindow.toggle()
+    }
+
+    // The same reasoning as the settings window: an open panel holds the
+    // keyboard exclusively, so it closes before a window that needs typing.
+    function toggleDeck(): void {
+        if (!deckWindow.shown)
+            root.island?.close()
+        deckWindow.toggle()
+    }
+
+    GlobalShortcut {
+        name: "deck"
+        description: "Shell · Open the steam deck"
+        onPressed: root.toggleDeck()
     }
 
     GlobalShortcut {

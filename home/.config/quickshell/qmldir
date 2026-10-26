@@ -48,6 +48,7 @@ singleton GamesService       1.0 services/GamesService.qml
 singleton NotesService       1.0 services/NotesService.qml
 singleton TasksService       1.0 services/TasksService.qml
 singleton DeckService        1.0 services/DeckService.qml
+singleton SteamDeckService   1.0 services/SteamDeckService.qml
 singleton PickerService      1.0 services/PickerService.qml
 singleton CaptureService     1.0 services/CaptureService.qml
 singleton RecorderService    1.0 services/RecorderService.qml
@@ -175,6 +176,7 @@ TrayModule      1.0 bar/modules/TrayModule.qml
 ChipFace         1.0 bar/modules/ChipFace.qml
 
 SettingsWindow        1.0 settings/SettingsWindow.qml
+SteamDeckWindow       1.0 steamdeck/SteamDeckWindow.qml
 SettingsPanel         1.0 settings/SettingsPanel.qml
 SettingsSection       1.0 settings/SettingsSection.qml
 BarSection            1.0 settings/BarSection.qml

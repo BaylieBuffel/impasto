@@ -53,6 +53,22 @@ hl.window_rule({
 })
 
 
+-- · the steam deck's window, another regular toplevel. The title is set by
+-- · steamdeck/SteamDeckWindow.qml, and the device's name is drawn inside, so
+-- · the match stays the same wherever it points.
+hl.window_rule({
+    name  = "quickshell-deck",
+    match = {
+        class = "^(org\\.quickshell)$",
+        title = "^(Steam Deck)$",
+    },
+
+    float  = true,
+    center = true,
+    size   = {1120, 720},
+})
+
+
 -- · imv, a look at one picture from the desk or from yazi, floats over the
 -- · layout instead of reflowing it.
 hl.window_rule({
@@ -115,6 +131,14 @@ hl.window_rule({
 hl.window_rule({
     name  = "chromium-touchpad-scroll",
     match = { class = "^(google-chrome|chrome-.*|discord|code)$" },
+
+    scroll_touchpad = 0.19,
+})
+
+-- · LibreWolf touchpad scrolling (Chromium-based, needs same correction)
+hl.window_rule({
+    name  = "librewolf-touchpad-scroll",
+    match = { class = "^(LibreWolf|librewolf)$" },
 
     scroll_touchpad = 0.19,
 })

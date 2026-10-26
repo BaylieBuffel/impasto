@@ -56,6 +56,7 @@ Singleton {
         { name: "machines",       label: "Virtual machines",     description: "Shell · Open the virtual machines" },
         { name: "servers",        label: "Development servers",  description: "Shell · Open the development servers" },
         { name: "screentime",     label: "Screen time",          description: "Shell · Open the screen time" },
+        { name: "deck",           label: "Steam Deck",           description: "Shell · Open the steam deck" },
         { name: "camera",         label: "Camera effects",       description: "Shell · Open the camera effects" },
         { name: "clipboard",      label: "Clipboard history",    description: "Shell · Open the clipboard history" },
         { name: "emoji",          label: "Emoji",                description: "Shell · Pick an emoji" },
